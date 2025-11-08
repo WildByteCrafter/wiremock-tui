@@ -1,9 +1,15 @@
 use crate::ScreenTrait;
+use crate::main_screen::MainScreen;
+use crate::model::{App, Msg};
+use crossterm::event;
+use crossterm::event::{Event, KeyCode};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
-use crate::application_model::App;
+use std::error::Error;
+
+pub struct ConnectionScreen {}
 
 impl ScreenTrait for ConnectionScreen {
     fn draw(&self, mut app: &App, f: &mut Frame) {
@@ -64,9 +70,21 @@ impl ScreenTrait for ConnectionScreen {
             f.render_widget(paragraph, control_layout[index]);
         }
     }
-}
 
-pub struct ConnectionScreen {}
+    fn event_handling(&self) -> Result<Option<Msg>, std::io::Error> {
+        if let Event::Key(key) = event::read()? {
+            let msg = match key.code {
+                KeyCode::Char('q') => Msg::Quit,
+                KeyCode::Up | KeyCode::Char('k') => Msg::ChangeServerSelectionUp,
+                KeyCode::Down | KeyCode::Char('j') => Msg::ChangeServerSelectionDown,
+                KeyCode::Enter => Msg::SwitchToMainScreen,
+                _ => Msg::None,
+            };
+            return Ok(Some(msg));
+        }
+        Ok(None)
+    }
+}
 
 impl ConnectionScreen {
     pub fn new() -> Self {

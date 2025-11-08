@@ -1,6 +1,6 @@
-use crate::ScreenTrait;
 use crate::connection_screen::ConnectionScreen;
 use crate::main_screen::MainScreen;
+use crate::{AppError, ScreenTrait};
 
 pub struct App {
     pub screen: Box<dyn ScreenTrait>,
@@ -33,7 +33,34 @@ impl App {
         self.current_selected_server = self.server_list[next_index];
     }
 
-    fn switch_to_main_screen(self: &mut Self) {
+    pub(crate) fn switch_to_main_screen(self: &mut Self) {
         self.screen = Box::new(MainScreen::new());
     }
+}
+
+pub fn handle_event(msg: Msg, app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
+    return match msg {
+        Msg::SwitchToMainScreen => {
+            app.switch_to_main_screen();
+            return Ok(());
+        }
+        Msg::ChangeServerSelectionUp => {
+            app.change_server_selection_up();
+            return Ok(());
+        }
+        Msg::ChangeServerSelectionDown => {
+            app.change_server_selection_down();
+            Ok(())
+        }
+        Msg::Quit => Err(Box::new(AppError::UserExit)),
+        Msg::None => Ok(()),
+    };
+}
+
+pub enum Msg {
+    SwitchToMainScreen,
+    ChangeServerSelectionUp,
+    ChangeServerSelectionDown,
+    Quit,
+    None,
 }
