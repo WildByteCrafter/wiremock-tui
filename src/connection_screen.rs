@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::ScreenTrait;
 use crate::main_screen::MainScreen;
 use crate::model::{App, Msg};
@@ -16,9 +17,9 @@ impl ScreenTrait for ConnectionScreen {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
-                Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3),
+                Constraint::Length(3),
+                Constraint::Min(0),
+                Constraint::Length(3),
             ])
             .split(f.area());
 
@@ -45,12 +46,15 @@ impl ScreenTrait for ConnectionScreen {
                 } else {
                     Style::default()
                 };
-                ListItem::new(server).style(style)
+                ListItem::new( format!("▶ {}", server)).style(style)
             })
             .collect();
 
-        let server_list =
-            List::new(items).block(Block::default().borders(Borders::ALL).title("Servers"));
+        let server_list = List::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Server selection"),
+        );
         f.render_widget(server_list, main_layout[1]);
 
         // Commands
@@ -83,6 +87,10 @@ impl ScreenTrait for ConnectionScreen {
             return Ok(Some(msg));
         }
         Ok(None)
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
