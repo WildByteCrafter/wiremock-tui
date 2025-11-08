@@ -44,7 +44,7 @@ impl ScreenTrait for ConnectionScreen {
                 } else {
                     Style::default()
                 };
-                ListItem::new( format!("▶ {}", server)).style(style)
+                ListItem::new(format!("▶ {}", server)).style(style)
             })
             .collect();
 

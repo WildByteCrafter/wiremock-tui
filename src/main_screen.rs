@@ -59,10 +59,7 @@ impl ScreenTrait for MainScreen {
         // Split middle area into two columns
         let content_layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(vec![
-                Constraint::Percentage(40),
-                Constraint::Percentage(60),
-            ])
+            .constraints(vec![Constraint::Percentage(40), Constraint::Percentage(60)])
             .split(main_layout[1]);
 
         // Stubs list display (left side)
@@ -71,7 +68,9 @@ impl ScreenTrait for MainScreen {
             .iter()
             .enumerate()
             .map(|(i, stub)| {
-                let url = stub.request.url
+                let url = stub
+                    .request
+                    .url
                     .as_ref()
                     .map(|s| s.as_str())
                     .unwrap_or("(no url)");
@@ -81,12 +80,12 @@ impl ScreenTrait for MainScreen {
                         format!("▶ {} {}", stub.request.method, url),
                         Style::default()
                             .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
+                            .add_modifier(Modifier::BOLD),
                     )
                 } else {
                     (
                         format!("  {} {}", stub.request.method, url),
-                        Style::default().fg(Color::White)
+                        Style::default().fg(Color::White),
                     )
                 };
 
@@ -94,12 +93,11 @@ impl ScreenTrait for MainScreen {
             })
             .collect();
 
-        let stubs_list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Stub Mappings"),
-            );
+        let stubs_list = List::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Stub Mappings"),
+        );
 
         f.render_widget(stubs_list, content_layout[0]);
 
@@ -107,11 +105,7 @@ impl ScreenTrait for MainScreen {
         let details = self.get_stub_details(app);
 
         let details_paragraph = Paragraph::new(details)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Details"),
-            )
+            .block(Block::default().borders(Borders::ALL).title("Details"))
             .style(Style::default().fg(Color::White))
             .wrap(Wrap { trim: false })
             .scroll((self.scroll_offset as u16, 0));
@@ -124,7 +118,8 @@ impl ScreenTrait for MainScreen {
             "↓/j: Down",
             "PgUp/PgDn: Scroll",
             "r: Refresh",
-            "q: Quit"
+            "d: Delete",
+            "q: Quit",
         ];
 
         let control_layout = Layout::default()
@@ -146,6 +141,7 @@ impl ScreenTrait for MainScreen {
             let msg = match key.code {
                 KeyCode::Char('r') => Msg::ReadAllStubs,
                 KeyCode::Char('q') => Msg::Quit,
+                KeyCode::Char('d') => Msg::DeleteSelectedStub,
                 KeyCode::Up | KeyCode::Char('k') => Msg::SelectPreviousStub,
                 KeyCode::Down | KeyCode::Char('j') => Msg::SelectNextStub,
                 KeyCode::PageUp => Msg::ScrollDetailsUp,

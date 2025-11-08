@@ -59,10 +59,22 @@ pub fn get_all_stubs(base_url: &str) -> Result<StubMappings, Box<dyn std::error:
         .header("Accept", "application/json")
         .call()?;
 
-    if response.status() == 200 {
+    let status_code = response.status().as_u16();
+    if status_code == 200 {
         let data: StubMappings = response.body_mut().read_json()?;
         Ok(data)
     } else {
-        Err(format!("Failed to retrieve stubs: HTTP {}", response.status()).into())
+        Err(format!("Failed to retrieve stubs: HTTP {}", status_code).into())
+    }
+}
+
+pub fn delete_stub(base_url: &str, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let url = format!("{}/__admin/mappings/{}", base_url, id);
+    let response = ureq::delete(&url).call()?;
+    let code = response.status().as_u16();
+    if code == 200 || code == 204 {
+        Ok(())
+    } else {
+        Err(format!("Failed to delete stub {}: HTTP {}", id, code).into())
     }
 }
