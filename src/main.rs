@@ -7,10 +7,10 @@ use io::Error;
 use ratatui::{Frame, Terminal, backend::CrosstermBackend};
 use std::io;
 
+use crate::model::handle_event;
 use model::App;
 use model::Msg;
 use thiserror::Error;
-use crate::model::handle_event;
 
 mod connection_screen;
 mod main_screen;
@@ -44,26 +44,17 @@ fn run_app<B: ratatui::backend::Backend>(
     app: &mut App,
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
-        terminal.draw(|f| {
-            app.screen.draw(app, f);
-        })?;
+        // Draw current screen
+        terminal.draw(|f| app.screen.draw(app, f))?;
 
         // Handle input
         if event::poll(std::time::Duration::from_millis(100))? {
-            let res = app.screen.event_handling()?;
-            if let Some(msg) = res {
-                match handle_event(msg, app) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        if let Some(app_error) = e.downcast_ref::<AppError>() {
-                            match app_error {
-                                AppError::UserExit => {
-                                    return Ok(());
-                                }
-                            }
-                        }
-                        return Err(e);
+            if let Some(msg) = app.screen.event_handling()? {
+                if let Err(e) = handle_event(msg, app) {
+                    if let Some(AppError::UserExit) = e.downcast_ref::<AppError>() {
+                        return Ok(());
                     }
+                    return Err(e);
                 }
             }
         }
