@@ -1,10 +1,10 @@
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use io::Error;
-use ratatui::{Frame, Terminal, backend::CrosstermBackend};
+use ratatui::{backend::CrosstermBackend, Frame, Terminal};
 use std::io;
 
 use crate::model::handle_event;

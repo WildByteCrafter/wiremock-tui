@@ -1,12 +1,11 @@
-use crate::ScreenTrait;
 use crate::model::{App, Msg};
+use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
-use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
-use std::error::Error;
+use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
+use ratatui::Frame;
 
 pub struct MainScreen {
     pub selected_stub_index: usize,

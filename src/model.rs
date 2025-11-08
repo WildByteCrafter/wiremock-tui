@@ -1,6 +1,6 @@
 use crate::connection_screen::ConnectionScreen;
 use crate::main_screen::MainScreen;
-use crate::wire_mock_client::{StubMapping, get_all_stubs};
+use crate::wire_mock_client::{get_all_stubs, StubMapping};
 use crate::{AppError, ScreenTrait};
 use std::error::Error;
 

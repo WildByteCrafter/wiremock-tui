@@ -1,14 +1,12 @@
-use std::any::Any;
-use crate::ScreenTrait;
-use crate::main_screen::MainScreen;
 use crate::model::{App, Msg};
+use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
-use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
-use std::error::Error;
+use ratatui::Frame;
+use std::any::Any;
 
 pub struct ConnectionScreen {}
 
