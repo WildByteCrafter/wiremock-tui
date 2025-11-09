@@ -18,6 +18,7 @@ mod wire_mock_client;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
