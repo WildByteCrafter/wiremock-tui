@@ -1,15 +1,14 @@
+use crate::model::handle_event;
 use crossterm::{
     event::{self},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use io::Error;
-use ratatui::{backend::CrosstermBackend, Frame, Terminal};
-use std::io;
-
-use crate::model::handle_event;
 use model::App;
 use model::Msg;
+use ratatui::{backend::CrosstermBackend, Frame, Terminal};
+use std::io;
 use thiserror::Error;
 
 mod connection_screen;
@@ -17,7 +16,8 @@ mod main_screen;
 mod model;
 mod wire_mock_client;
 
-fn main() -> Result<(), Error> {
+#[tokio::main]
+async fn main() -> Result<(), Error> {
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
 
     // Create app state
     let mut app = App::new();
-    let res = run_app(&mut terminal, &mut app);
+    let res = run_app(&mut terminal, &mut app).await;
 
     // Restore terminal
     disable_raw_mode()?;
@@ -40,11 +40,15 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn run_app<B: ratatui::backend::Backend>(
+async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
+        if let Ok(msg) = app.async_channel_receiver.1.try_recv() {
+            handle_event(msg, app)?;
+        }
+
         // Draw current screen
         terminal.draw(|f| app.screen.draw(app, f))?;
 

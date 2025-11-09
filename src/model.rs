@@ -3,6 +3,9 @@ use crate::main_screen::MainScreen;
 use crate::wire_mock_client::{delete_stub, get_all_stubs, StubMapping};
 use crate::{AppError, ScreenTrait};
 use std::error::Error;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::{interval, Duration};
 
 pub struct App {
     pub screen: Box<dyn ScreenTrait>,
@@ -12,6 +15,8 @@ pub struct App {
     pub stubs: Vec<StubMapping>,
     pub selected_stub_index: usize,
     pub scroll_offset: usize,
+    pub async_channel_receiver: (Sender<Msg>, Receiver<Msg>),
+    pub refresh_task: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl App {
@@ -30,6 +35,8 @@ impl App {
             stubs: vec![],
             selected_stub_index: 0,
             scroll_offset: 0,
+            async_channel_receiver: mpsc::channel::<Msg>(100),
+            refresh_task: None,       
         }
     }
 
@@ -75,6 +82,25 @@ impl App {
 
     fn scroll_details_down(&mut self) {
         self.scroll_offset += 1;
+    }
+
+    fn toggle_auto_refresh_stubs(&mut self) {
+        if let Some(task) = self.refresh_task.take() {
+            task.abort();
+            return;
+        }
+        let send = self.async_channel_receiver.0.clone();
+        let task = tokio::spawn(async move {
+            let mut interval = interval(Duration::from_secs(1));
+            interval.tick().await;
+            loop {
+                interval.tick().await;
+                if send.send(Msg::ReadAllStubs).await.is_err() {
+                    break;
+                }
+            }
+        });
+        self.refresh_task = Some(task);
     }
 
     fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
@@ -140,6 +166,10 @@ pub fn handle_event(msg: Msg, app: &mut App) -> Result<(), Box<dyn std::error::E
         Msg::Quit => Err(Box::new(AppError::UserExit)),
         Msg::None => Ok(()),
         Msg::ReadAllStubs => app.read_all_stubs(),
+        Msg::ToggleAutoRefreshStubs => {
+            app.toggle_auto_refresh_stubs();
+            Ok(())
+        }
     };
 }
 
@@ -153,6 +183,7 @@ pub enum Msg {
     ScrollDetailsDown,
     DeleteSelectedStub,
     ReadAllStubs,
+    ToggleAutoRefreshStubs,
     Quit,
     None,
 }

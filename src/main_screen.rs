@@ -114,6 +114,7 @@ impl ScreenTrait for MainScreen {
             "r: Refresh",
             "d: Delete",
             "q: Quit",
+            "a: Toggle auto refresh",
         ];
 
         let control_layout = Layout::default()
@@ -133,6 +134,7 @@ impl ScreenTrait for MainScreen {
     fn event_handling(&self) -> Result<Option<Msg>, std::io::Error> {
         if let Event::Key(key) = event::read()? {
             let msg = match key.code {
+                KeyCode::Char('a') => Msg::ToggleAutoRefreshStubs,
                 KeyCode::Char('r') => Msg::ReadAllStubs,
                 KeyCode::Char('q') => Msg::Quit,
                 KeyCode::Char('d') => Msg::DeleteSelectedStub,
