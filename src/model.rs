@@ -29,30 +29,30 @@ impl App {
         }
     }
 
-    pub fn change_server_selection_up(self: &mut Self) {
+    fn change_server_selection_up(self: &mut Self) {
         let next_index = self.current_selected_server_index.saturating_sub(1);
         self.current_selected_server_index = next_index;
         self.current_selected_server = self.server_list[next_index];
     }
 
-    pub fn change_server_selection_down(self: &mut Self) {
+    fn change_server_selection_down(self: &mut Self) {
         let next_index =
             (self.current_selected_server_index as usize + 1).min(self.server_list.len() - 1);
         self.current_selected_server_index = next_index;
         self.current_selected_server = self.server_list[next_index];
     }
 
-    pub(crate) fn switch_to_main_screen(self: &mut Self) {
+    fn switch_to_main_screen(self: &mut Self) {
         self.screen = Box::new(MainScreen::new());
     }
 
-    pub(crate) fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
+    fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
         let res = get_all_stubs(self.current_selected_server)?;
         self.stubs = res.mappings;
         Ok(())
     }
 
-    pub fn select_next_stub(&mut self) {
+    fn select_next_stub(&mut self) {
         if !self.stubs.is_empty() {
             if let Some(screen) = self
                 .screen
@@ -66,7 +66,7 @@ impl App {
         }
     }
 
-    pub fn select_previous_stub(&mut self) {
+    fn select_previous_stub(&mut self) {
         if let Some(screen) = self
             .screen
             .as_any_mut()
@@ -77,7 +77,7 @@ impl App {
         }
     }
 
-    pub fn scroll_details_up(&mut self) {
+    fn scroll_details_up(&mut self) {
         if let Some(screen) = self
             .screen
             .as_any_mut()
@@ -87,7 +87,7 @@ impl App {
         }
     }
 
-    pub fn scroll_details_down(&mut self) {
+    fn scroll_details_down(&mut self) {
         if let Some(screen) = self
             .screen
             .as_any_mut()
@@ -97,7 +97,7 @@ impl App {
         }
     }
 
-    pub fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
+    fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
         if self.stubs.is_empty() {
             return Ok(());
         }
