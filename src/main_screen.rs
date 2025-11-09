@@ -7,17 +7,11 @@ use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
 
-pub struct MainScreen {
-    pub selected_stub_index: usize,
-    pub scroll_offset: usize,
-}
+pub struct MainScreen {}
 
 impl MainScreen {
     pub fn new() -> Self {
-        MainScreen {
-            selected_stub_index: 0,
-            scroll_offset: 0,
-        }
+        MainScreen {}
     }
 
     fn get_stub_details(&self, app: &App) -> String {
@@ -25,7 +19,7 @@ impl MainScreen {
             return "No stubs available".to_string();
         }
 
-        let stub = &app.stubs[self.selected_stub_index];
+        let stub = &app.stubs[app.selected_stub_index];
 
         // Format as JSON for readability
         match serde_json::to_string_pretty(&stub) {
@@ -75,7 +69,7 @@ impl ScreenTrait for MainScreen {
                     .map(|s| s.as_str())
                     .unwrap_or("(no url)");
 
-                let (text, style) = if i == self.selected_stub_index {
+                let (text, style) = if i == app.selected_stub_index {
                     (
                         format!("▶ {} {}", stub.request.method, url),
                         Style::default()
@@ -108,7 +102,7 @@ impl ScreenTrait for MainScreen {
             .block(Block::default().borders(Borders::ALL).title("Details"))
             .style(Style::default().fg(Color::White))
             .wrap(Wrap { trim: false })
-            .scroll((self.scroll_offset as u16, 0));
+            .scroll((app.scroll_offset as u16, 0));
 
         f.render_widget(details_paragraph, content_layout[1]);
 
@@ -151,9 +145,5 @@ impl ScreenTrait for MainScreen {
             return Ok(Some(msg));
         }
         Ok(None)
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
     }
 }

@@ -6,7 +6,6 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
-use std::any::Any;
 
 pub struct ConnectionScreen {}
 
@@ -85,10 +84,6 @@ impl ScreenTrait for ConnectionScreen {
             return Ok(Some(msg));
         }
         Ok(None)
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 

@@ -10,6 +10,8 @@ pub struct App {
     pub current_selected_server: &'static str,
     pub current_selected_server_index: usize,
     pub stubs: Vec<StubMapping>,
+    pub selected_stub_index: usize,
+    pub scroll_offset: usize,
 }
 
 impl App {
@@ -26,6 +28,8 @@ impl App {
             current_selected_server: current_selected_server,
             current_selected_server_index: 0,
             stubs: vec![],
+            selected_stub_index: 0,
+            scroll_offset: 0,
         }
     }
 
@@ -53,77 +57,46 @@ impl App {
     }
 
     fn select_next_stub(&mut self) {
-        if !self.stubs.is_empty() {
-            if let Some(screen) = self
-                .screen
-                .as_any_mut()
-                .downcast_mut::<crate::main_screen::MainScreen>()
-            {
-                screen.selected_stub_index =
-                    (screen.selected_stub_index + 1).min(self.stubs.len() - 1);
-                screen.scroll_offset = 0; // Reset scroll when changing stub
-            }
+        if self.stubs.is_empty() {
+            return;
         }
+        self.selected_stub_index = (self.selected_stub_index + 1).min(self.stubs.len() - 1);
+        self.scroll_offset = 0;
     }
 
     fn select_previous_stub(&mut self) {
-        if let Some(screen) = self
-            .screen
-            .as_any_mut()
-            .downcast_mut::<crate::main_screen::MainScreen>()
-        {
-            screen.selected_stub_index = screen.selected_stub_index.saturating_sub(1);
-            screen.scroll_offset = 0; // Reset scroll when changing stub
-        }
+        self.selected_stub_index = self.selected_stub_index.saturating_sub(1);
+        self.scroll_offset = 0; // Reset scroll when changing stub
     }
 
     fn scroll_details_up(&mut self) {
-        if let Some(screen) = self
-            .screen
-            .as_any_mut()
-            .downcast_mut::<crate::main_screen::MainScreen>()
-        {
-            screen.scroll_offset = screen.scroll_offset.saturating_sub(1);
-        }
+        self.scroll_offset = self.scroll_offset.saturating_sub(1);
     }
 
     fn scroll_details_down(&mut self) {
-        if let Some(screen) = self
-            .screen
-            .as_any_mut()
-            .downcast_mut::<crate::main_screen::MainScreen>()
-        {
-            screen.scroll_offset += 1;
-        }
+        self.scroll_offset += 1;
     }
 
     fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
         if self.stubs.is_empty() {
             return Ok(());
         }
-        // Get selected index from MainScreen
-        if let Some(screen) = self
-            .screen
-            .as_any_mut()
-            .downcast_mut::<crate::main_screen::MainScreen>()
-        {
-            let idx = screen.selected_stub_index.min(self.stubs.len() - 1);
-            if let Some(stub) = self.stubs.get(idx) {
-                let id = stub.id.clone();
-                // Perform delete on server
-                delete_stub(self.current_selected_server, &id)?;
-                // Remove locally
-                self.stubs.remove(idx);
-                // Adjust selection
-                if self.stubs.is_empty() {
-                    screen.selected_stub_index = 0;
-                    screen.scroll_offset = 0;
-                } else {
-                    if idx >= self.stubs.len() {
-                        screen.selected_stub_index = self.stubs.len() - 1;
-                    }
-                    screen.scroll_offset = 0;
+        let idx = self.selected_stub_index.min(self.stubs.len() - 1);
+        if let Some(stub) = self.stubs.get(idx) {
+            let id = stub.id.clone();
+            // Perform delete on server
+            delete_stub(self.current_selected_server, &id)?;
+            // Remove locally
+            self.stubs.remove(idx);
+            // Adjust selection
+            if self.stubs.is_empty() {
+                self.selected_stub_index = 0;
+                self.scroll_offset = 0;
+            } else {
+                if idx >= self.stubs.len() {
+                    self.selected_stub_index = self.stubs.len() - 1;
                 }
+                self.scroll_offset = 0;
             }
         }
         Ok(())

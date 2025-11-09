@@ -65,8 +65,6 @@ fn run_app<B: ratatui::backend::Backend>(
 trait ScreenTrait {
     fn draw(&self, app: &App, f: &mut Frame);
     fn event_handling(&self) -> Result<Option<Msg>, Error>;
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
 #[derive(Error, Debug)]
