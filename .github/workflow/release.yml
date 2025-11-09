@@ -1,0 +1,203 @@
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  VERSION: ${{ github.ref_name }}
+
+jobs:
+  linux-musl:
+    name: Linux MUSL (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-unknown-linux-musl, aarch64-unknown-linux-musl]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross --rev v0.2.5
+      - name: Build
+        run: |
+          cross build --locked --release --target ${{ matrix.target }}
+          mkdir -p dist/pack/bin
+          cp target/${{ matrix.target }}/release/wm-tui dist/pack/bin/wm-tui
+          tar -C dist/pack -czf dist/wm-tui-${{ env.VERSION }}-${{ matrix.target }}.tar.gz bin
+      - name: Checksums
+        run: |
+          cd dist && sha256sum wm-tui-${{ env.VERSION }}-${{ matrix.target }}.tar.gz > wm-tui-${{ env.VERSION }}-${{ matrix.target }}.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.target }}
+          path: dist/*
+
+  windows-msvc:
+    name: Windows (x86_64-pc-windows-msvc)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        shell: bash
+        run: |
+          cargo build --locked --release --target x86_64-pc-windows-msvc
+          mkdir -p dist/pack/bin
+          cp target/x86_64-pc-windows-msvc/release/wm-tui.exe dist/pack/bin/wm-tui.exe
+          tar -C dist/pack -czf dist/wm-tui-${{ env.VERSION }}-x86_64-pc-windows-msvc.tar.gz bin
+      - name: Checksums
+        shell: bash
+        run: |
+          cd dist && sha256sum wm-tui-${{ env.VERSION }}-x86_64-pc-windows-msvc.tar.gz > wm-tui-${{ env.VERSION }}-x86_64-pc-windows-msvc.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64
+          path: dist/*
+
+  macos-universal2:
+    name: macOS universal2
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - name: Build both arches
+        run: |
+          cargo build --locked --release --target aarch64-apple-darwin
+          cargo build --locked --release --target x86_64-apple-darwin
+          mkdir -p dist
+          lipo -create \
+            -output dist/wm-tui-${{ env.VERSION }}-apple-darwin-universal \
+            target/aarch64-apple-darwin/release/wm-tui \
+            target/x86_64-apple-darwin/release/wm-tui
+          mkdir -p dist/pack/bin
+          cp dist/wm-tui-${{ env.VERSION }}-apple-darwin-universal dist/pack/bin/wm-tui
+          tar -C dist/pack -czf dist/wm-tui-${{ env.VERSION }}-apple-darwin-universal.tar.gz bin
+      - name: Checksums
+        run: |
+          cd dist && shasum -a 256 wm-tui-${{ env.VERSION }}-apple-darwin-universal.tar.gz > wm-tui-${{ env.VERSION }}-apple-darwin-universal.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal2
+          path: dist/*
+
+  publish-to-tap-release:
+    name: Publish assets to WildByteCrafter/homebrew-tap Release
+    runs-on: ubuntu-latest
+    needs: [linux-musl, windows-msvc, macos-universal2]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Flatten artifacts for upload
+        run: |
+          mkdir -p upload
+          find dist -type f -name '*.tar.gz' -exec cp {} upload/ \;
+          find dist -type f -name '*.sha256' -exec cp {} upload/ \;
+      - name: Create/Update Release in tap repo and upload assets
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.TAP_RELEASE_TOKEN }}
+        with:
+          repository: WildByteCrafter/homebrew-tap
+          tag_name: ${{ env.VERSION }}
+          name: wm-tui ${{ env.VERSION }}
+          draft: false
+          prerelease: false
+          target_commitish: main
+          files: |
+            upload/*.tar.gz
+            upload/*.sha256
+
+  update-brew-tap:
+    name: Update Homebrew Tap
+    runs-on: ubuntu-latest
+    needs: publish-to-tap-release
+    env:
+      TAP_CLONE_URL: ${{ secrets.TAP_CLONE_URL }}
+    steps:
+      - name: Compute URLs
+        id: urls
+        run: |
+          echo "linux_x86_url=https://github.com/WildByteCrafter/homebrew-tap/releases/download/${{ env.VERSION }}/wm-tui-${{ env.VERSION }}-x86_64-unknown-linux-musl.tar.gz" >> $GITHUB_OUTPUT
+          echo "linux_arm_url=https://github.com/WildByteCrafter/homebrew-tap/releases/download/${{ env.VERSION }}/wm-tui-${{ env.VERSION }}-aarch64-unknown-linux-musl.tar.gz" >> $GITHUB_OUTPUT
+          echo "win_x86_url=https://github.com/WildByteCrafter/homebrew-tap/releases/download/${{ env.VERSION }}/wm-tui-${{ env.VERSION }}-x86_64-pc-windows-msvc.tar.gz" >> $GITHUB_OUTPUT
+          echo "mac_univ_url=https://github.com/WildByteCrafter/homebrew-tap/releases/download/${{ env.VERSION }}/wm-tui-${{ env.VERSION }}-apple-darwin-universal.tar.gz" >> $GITHUB_OUTPUT
+      - name: Fetch SHAs
+        id: shas
+        run: |
+          sudo apt-get update && sudo apt-get install -y curl
+          LINUX_X86_SHA=$(curl -L '${{ steps.urls.outputs.linux_x86_url }}' | sha256sum | cut -d' ' -f1)
+          LINUX_ARM_SHA=$(curl -L '${{ steps.urls.outputs.linux_arm_url }}' | sha256sum | cut -d' ' -f1)
+          WIN_X86_SHA=$(curl -L '${{ steps.urls.outputs.win_x86_url }}' | sha256sum | cut -d' ' -f1)
+          MAC_UNIV_SHA=$(curl -L '${{ steps.urls.outputs.mac_univ_url }}' | sha256sum | cut -d' ' -f1)
+          echo "linux_x86_sha=$LINUX_X86_SHA" >> $GITHUB_OUTPUT
+          echo "linux_arm_sha=$LINUX_ARM_SHA" >> $GITHUB_OUTPUT
+          echo "win_x86_sha=$WIN_X86_SHA" >> $GITHUB_OUTPUT
+          echo "mac_univ_sha=$MAC_UNIV_SHA" >> $GITHUB_OUTPUT
+      - name: Update tap repo
+        run: |
+          test -n "$TAP_CLONE_URL" || { echo 'Set TAP_CLONE_URL secret (with token)'; exit 1; }
+          git clone "$TAP_CLONE_URL" tap
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cd ..
+          mkdir -p tap/Formula
+          cat > tap/Formula/wm-tui.rb <<'RUBY'
+          class WmTui < Formula
+            desc "WireMock TUI"
+            homepage "https://github.com/${OWNER_REPO}"
+            version "${VERSION}"
+
+            on_macos do
+              url "${MAC_UNIV_URL}"
+              sha256 "${MAC_UNIV_SHA}"
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "${LINUX_ARM_URL}"
+                sha256 "${LINUX_ARM_SHA}"
+              else
+                url "${LINUX_X86_URL}"
+                sha256 "${LINUX_X86_SHA}"
+              end
+            end
+
+            def install
+              bin.install "wm-tui"
+            end
+
+            test do
+              system "#{bin}/wm-tui", "--version"
+            end
+          end
+          RUBY
+          sed -i "s|\${OWNER_REPO}|${{ github.repository }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${VERSION}|${{ env.VERSION }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${LINUX_X86_URL}|${{ steps.urls.outputs.linux_x86_url }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${LINUX_ARM_URL}|${{ steps.urls.outputs.linux_arm_url }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${WIN_X86_URL}|${{ steps.urls.outputs.win_x86_url }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${MAC_UNIV_URL}|${{ steps.urls.outputs.mac_univ_url }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${LINUX_X86_SHA}|${{ steps.shas.outputs.linux_x86_sha }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${LINUX_ARM_SHA}|${{ steps.shas.outputs.linux_arm_sha }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${WIN_X86_SHA}|${{ steps.shas.outputs.win_x86_sha }}|g" tap/Formula/wm-tui.rb
+          sed -i "s|\${MAC_UNIV_SHA}|${{ steps.shas.outputs.mac_univ_sha }}|g" tap/Formula/wm-tui.rb
+          cd tap && git add Formula/wm-tui.rb && git commit -m "wm-tui ${{ env.VERSION }}" && git push
