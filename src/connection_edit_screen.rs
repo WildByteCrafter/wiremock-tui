@@ -2,11 +2,11 @@ use crate::model::{ApplicationEvent, ApplicationModel};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
-use ratatui::Frame;
-use std::io::Error;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::Frame;
+use std::io::Error;
 
 pub struct ConnectionEditScreen {}
 
@@ -35,7 +35,6 @@ impl ScreenTrait for ConnectionEditScreen {
             )
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(title, main_layout[0]);
-
 
         // Commands
         let commands = vec!["q : Quit", "Enter : Confirm"];
