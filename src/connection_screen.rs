@@ -32,11 +32,17 @@ impl ScreenTrait for ConnectionScreen {
 
         // Server list display
         let items: Vec<ListItem> = app
+            .server_selection
             .server_list
             .iter()
             .enumerate()
-            .map(|(i, &server)| {
-                let style = if i == app.current_selected_server_index {
+            .map(|(i, server)| {
+                let style = if i
+                    == app
+                        .server_selection
+                        .current_selected_server_index
+                        .unwrap_or(999)
+                {
                     Style::default()
                         .fg(Color::Yellow)
                         .add_modifier(Modifier::BOLD)

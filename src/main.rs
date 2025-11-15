@@ -17,9 +17,7 @@ mod model;
 mod wire_mock_client;
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
-
-    // Setup terminal
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -27,7 +25,7 @@ async fn main() -> Result<(), Error> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app state
-    let mut app = App::new();
+    let mut app = App::new()?;
     let res = run_app(&mut terminal, &mut app).await;
 
     // Restore terminal
@@ -76,4 +74,6 @@ trait ScreenTrait {
 enum AppError {
     #[error("User exit")]
     UserExit,
+    #[error("No wire mock server selected")]
+    NoServerSelected,
 }

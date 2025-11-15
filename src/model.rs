@@ -2,16 +2,31 @@ use crate::connection_screen::ConnectionScreen;
 use crate::main_screen::MainScreen;
 use crate::wire_mock_client::{delete_stub, get_all_stubs, StubMapping};
 use crate::{AppError, ScreenTrait};
+use serde::{Deserialize, Serialize};
 use std::error::Error;
+
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::{interval, Duration};
 
+#[derive(Serialize, Deserialize)]
+pub struct AppConfig {
+    pub server_list: Vec<String>,
+    pub selected_server_index: Option<usize>,
+}
+
+impl ::std::default::Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            server_list: vec!["localhost:8080".to_string()],
+            selected_server_index: Some(0),
+        }
+    }
+}
+
 pub struct App {
     pub screen: Box<dyn ScreenTrait>,
-    pub server_list: Vec<&'static str>,
-    pub current_selected_server: &'static str,
-    pub current_selected_server_index: usize,
+    pub server_selection: ServerSelection,
     pub stubs: Vec<StubMapping>,
     pub selected_stub_index: usize,
     pub scroll_offset: usize,
@@ -20,37 +35,17 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
-        let servers = vec![
-            "http://localhost:9191",
-            "http://localhost:8080",
-            "http://localhost:8181",
-        ];
-        let current_selected_server = servers[0];
-        App {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
+        let cfg: AppConfig = confy::load("wm-tui", None)?;
+        Ok(App {
             screen: Box::new(ConnectionScreen::new()),
-            server_list: servers,
-            current_selected_server: current_selected_server,
-            current_selected_server_index: 0,
+            server_selection: ServerSelection::new(&cfg),
             stubs: vec![],
             selected_stub_index: 0,
             scroll_offset: 0,
             async_channel_receiver: mpsc::channel::<Msg>(100),
-            refresh_task: None,       
-        }
-    }
-
-    fn change_server_selection_up(self: &mut Self) {
-        let next_index = self.current_selected_server_index.saturating_sub(1);
-        self.current_selected_server_index = next_index;
-        self.current_selected_server = self.server_list[next_index];
-    }
-
-    fn change_server_selection_down(self: &mut Self) {
-        let next_index =
-            (self.current_selected_server_index as usize + 1).min(self.server_list.len() - 1);
-        self.current_selected_server_index = next_index;
-        self.current_selected_server = self.server_list[next_index];
+            refresh_task: None,
+        })
     }
 
     fn switch_to_main_screen(self: &mut Self) {
@@ -58,7 +53,10 @@ impl App {
     }
 
     fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
-        let res = get_all_stubs(self.current_selected_server)?;
+        if self.server_selection.current_selected_server().is_none() {
+            return Err(Box::new(AppError::NoServerSelected));
+        }
+        let res = get_all_stubs(self.server_selection.current_selected_server().unwrap())?;
         self.stubs = res.mappings;
         Ok(())
     }
@@ -104,14 +102,17 @@ impl App {
     }
 
     fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.stubs.is_empty() {
+        if self.stubs.is_empty() || self.server_selection.current_selected_server().is_none() {
             return Ok(());
         }
         let idx = self.selected_stub_index.min(self.stubs.len() - 1);
         if let Some(stub) = self.stubs.get(idx) {
             let id = stub.id.clone();
             // Perform delete on server
-            delete_stub(self.current_selected_server, &id)?;
+            delete_stub(
+                self.server_selection.current_selected_server().unwrap(),
+                &id,
+            )?;
             // Remove locally
             self.stubs.remove(idx);
             // Adjust selection
@@ -136,11 +137,11 @@ pub fn handle_event(msg: Msg, app: &mut App) -> Result<(), Box<dyn std::error::E
             return Ok(());
         }
         Msg::ChangeServerSelectionUp => {
-            app.change_server_selection_up();
+            app.server_selection.change_server_selection_up();
             return Ok(());
         }
         Msg::ChangeServerSelectionDown => {
-            app.change_server_selection_down();
+            app.server_selection.change_server_selection_down();
             Ok(())
         }
         Msg::SelectNextStub => {
@@ -171,6 +172,45 @@ pub fn handle_event(msg: Msg, app: &mut App) -> Result<(), Box<dyn std::error::E
             Ok(())
         }
     };
+}
+
+pub struct ServerSelection {
+    pub server_list: Vec<String>,
+    pub current_selected_server_index: Option<usize>,
+}
+
+impl ServerSelection {
+    pub fn new(app_config: &AppConfig) -> Self {
+        Self {
+            server_list: app_config.server_list.clone(),
+            current_selected_server_index: app_config.selected_server_index,
+        }
+    }
+
+    fn change_server_selection_up(self: &mut Self) {
+        if self.current_selected_server_index.is_none() {
+            return;
+        }
+        let next_index = self
+            .current_selected_server_index
+            .unwrap()
+            .saturating_sub(1);
+        self.current_selected_server_index = Some(next_index);
+    }
+
+    pub fn current_selected_server(&self) -> Option<&String> {
+        self.current_selected_server_index
+            .and_then(|i| self.server_list.get(i))
+    }
+
+    fn change_server_selection_down(self: &mut Self) {
+        if self.current_selected_server_index.is_none() {
+            return;
+        }
+        let next_index =
+            (self.current_selected_server_index.unwrap() + 1).min(self.server_list.len() - 1);
+        self.current_selected_server_index = Some(next_index);
+    }
 }
 
 pub enum Msg {

@@ -52,7 +52,7 @@ pub struct Meta {
     pub total: usize,
 }
 
-pub fn get_all_stubs(base_url: &str) -> Result<StubMappings, Box<dyn std::error::Error>> {
+pub fn get_all_stubs(base_url: &String) -> Result<StubMappings, Box<dyn std::error::Error>> {
     let url = format!("{}/__admin/mappings", base_url);
 
     let mut response = ureq::get(&url)
@@ -68,7 +68,7 @@ pub fn get_all_stubs(base_url: &str) -> Result<StubMappings, Box<dyn std::error:
     }
 }
 
-pub fn delete_stub(base_url: &str, id: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn delete_stub(base_url: &String, id: &str) -> Result<(), Box<dyn std::error::Error>> {
     let url = format!("{}/__admin/mappings/{}", base_url, id);
     let response = ureq::delete(&url).call()?;
     let code = response.status().as_u16();
