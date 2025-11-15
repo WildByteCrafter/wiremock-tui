@@ -1,4 +1,3 @@
-use crate::model::handle_event;
 use crossterm::{
     event::{self},
     execute,
@@ -45,7 +44,7 @@ async fn run_app<B: ratatui::backend::Backend>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
         if let Ok(msg) = app.async_channel_receiver.1.try_recv() {
-            handle_event(msg, app)?;
+            app.handle_event(msg)?;
         }
 
         // Draw current screen
@@ -54,7 +53,7 @@ async fn run_app<B: ratatui::backend::Backend>(
         // Handle input
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Some(msg) = app.screen.event_handling()? {
-                if let Err(e) = handle_event(msg, app) {
+                if let Err(e) = app.handle_event(msg) {
                     if let Some(AppError::UserExit) = e.downcast_ref::<AppError>() {
                         return Ok(());
                     }
