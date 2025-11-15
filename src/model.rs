@@ -18,7 +18,7 @@ pub struct AppConfig {
 impl ::std::default::Default for AppConfig {
     fn default() -> Self {
         Self {
-            server_list: vec!["localhost:8080".to_string()],
+            server_list: vec!["http://localhost:9393".to_string()],
             selected_server_index: Some(0),
         }
     }
@@ -128,50 +128,50 @@ impl App {
         }
         Ok(())
     }
-}
 
-pub fn handle_event(msg: Msg, app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    return match msg {
-        Msg::SwitchToMainScreen => {
-            app.switch_to_main_screen();
-            return Ok(());
+    pub fn handle_event(&mut self, msg: Msg) -> Result<(), Box<dyn std::error::Error>> {
+        match msg {
+            Msg::SwitchToMainScreen => {
+                self.switch_to_main_screen();
+                Ok(())
+            }
+            Msg::ChangeServerSelectionUp => {
+                self.server_selection.change_server_selection_up();
+                Ok(())
+            }
+            Msg::ChangeServerSelectionDown => {
+                self.server_selection.change_server_selection_down();
+                Ok(())
+            }
+            Msg::SelectNextStub => {
+                self.select_next_stub();
+                Ok(())
+            }
+            Msg::SelectPreviousStub => {
+                self.select_previous_stub();
+                Ok(())
+            }
+            Msg::ScrollDetailsUp => {
+                self.scroll_details_up();
+                Ok(())
+            }
+            Msg::ScrollDetailsDown => {
+                self.scroll_details_down();
+                Ok(())
+            }
+            Msg::DeleteSelectedStub => {
+                self.delete_selected_stub()?;
+                Ok(())
+            }
+            Msg::Quit => Err(Box::new(AppError::UserExit)),
+            Msg::None => Ok(()),
+            Msg::ReadAllStubs => self.read_all_stubs(),
+            Msg::ToggleAutoRefreshStubs => {
+                self.toggle_auto_refresh_stubs();
+                Ok(())
+            }
         }
-        Msg::ChangeServerSelectionUp => {
-            app.server_selection.change_server_selection_up();
-            return Ok(());
-        }
-        Msg::ChangeServerSelectionDown => {
-            app.server_selection.change_server_selection_down();
-            Ok(())
-        }
-        Msg::SelectNextStub => {
-            app.select_next_stub();
-            Ok(())
-        }
-        Msg::SelectPreviousStub => {
-            app.select_previous_stub();
-            Ok(())
-        }
-        Msg::ScrollDetailsUp => {
-            app.scroll_details_up();
-            Ok(())
-        }
-        Msg::ScrollDetailsDown => {
-            app.scroll_details_down();
-            Ok(())
-        }
-        Msg::DeleteSelectedStub => {
-            app.delete_selected_stub()?;
-            Ok(())
-        }
-        Msg::Quit => Err(Box::new(AppError::UserExit)),
-        Msg::None => Ok(()),
-        Msg::ReadAllStubs => app.read_all_stubs(),
-        Msg::ToggleAutoRefreshStubs => {
-            app.toggle_auto_refresh_stubs();
-            Ok(())
-        }
-    };
+    }
 }
 
 pub struct ServerSelection {
