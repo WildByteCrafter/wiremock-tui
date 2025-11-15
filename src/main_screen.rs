@@ -1,4 +1,4 @@
-use crate::model::{App, ApplicationEvent};
+use crate::model::{ApplicationModel, ApplicationEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -14,7 +14,7 @@ impl MainScreen {
         MainScreen {}
     }
 
-    fn get_stub_details(&self, app: &App) -> String {
+    fn get_stub_details(&self, app: &ApplicationModel) -> String {
         if app.stubs.is_empty() {
             return "No stubs available".to_string();
         }
@@ -30,7 +30,7 @@ impl MainScreen {
 }
 
 impl ScreenTrait for MainScreen {
-    fn draw(&self, app: &App, f: &mut Frame) {
+    fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
@@ -140,8 +140,8 @@ impl ScreenTrait for MainScreen {
                 KeyCode::Char('d') => ApplicationEvent::DeleteSelectedStub,
                 KeyCode::Up | KeyCode::Char('k') => ApplicationEvent::SelectPreviousStub,
                 KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::SelectNextStub,
-                KeyCode::PageUp => ApplicationEvent::ScrollDetailsUp,
-                KeyCode::PageDown => ApplicationEvent::ScrollDetailsDown,
+                KeyCode::PageUp => ApplicationEvent::ScrollStubDetailsUp,
+                KeyCode::PageDown => ApplicationEvent::ScrollStubDetailsDown,
                 _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));

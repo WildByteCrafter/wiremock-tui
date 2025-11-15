@@ -4,16 +4,17 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use io::Error;
-use model::App;
+use model::ApplicationModel;
 use model::ApplicationEvent;
 use ratatui::{backend::CrosstermBackend, Frame, Terminal};
 use std::io;
 use thiserror::Error;
 
-mod connection_screen;
+mod connection_selection_screen;
 mod main_screen;
 mod model;
 mod wire_mock_client;
+mod connection_edit_screen;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app state
-    let mut app = App::new()?;
+    let mut app = ApplicationModel::new()?;
     let res = run_app(&mut terminal, &mut app).await;
 
     // Restore terminal
@@ -40,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
-    app: &mut App,
+    app: &mut ApplicationModel,
 ) -> Result<(), Box<dyn std::error::Error>> {
     loop {
         if let Ok(msg) = app.async_channel_receiver.1.try_recv() {
@@ -65,7 +66,7 @@ async fn run_app<B: ratatui::backend::Backend>(
 }
 
 trait ScreenTrait {
-    fn draw(&self, app: &App, f: &mut Frame);
+    fn draw(&self, app: &ApplicationModel, f: &mut Frame);
     fn event_handling(&self) -> Result<Option<ApplicationEvent>, Error>;
 }
 

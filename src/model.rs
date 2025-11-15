@@ -1,10 +1,10 @@
-use crate::connection_screen::ConnectionSelectionScreen;
+use crate::connection_edit_screen::ConnectionEditScreen;
+use crate::connection_selection_screen::ConnectionSelectionScreen;
 use crate::main_screen::MainScreen;
 use crate::wire_mock_client::{delete_stub, get_all_stubs, StubMapping};
 use crate::{AppError, ScreenTrait};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::{interval, Duration};
@@ -24,9 +24,9 @@ impl ::std::default::Default for AppConfig {
     }
 }
 
-pub struct App {
+pub struct ApplicationModel {
     pub screen: Box<dyn ScreenTrait>,
-    pub server_selection: ServerSelection,
+    pub server_selection: Option<ServerConnectionModel>,
     pub stubs: Vec<StubMapping>,
     pub selected_stub_index: usize,
     pub scroll_offset: usize,
@@ -34,29 +34,52 @@ pub struct App {
     pub refresh_task: Option<tokio::task::JoinHandle<()>>,
 }
 
-impl App {
+impl ApplicationModel {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let cfg: AppConfig = confy::load("wm-tui", None)?;
-        Ok(App {
+        let mut application_model = ApplicationModel {
             screen: Box::new(ConnectionSelectionScreen::new()),
-            server_selection: ServerSelection::new(&cfg),
+            server_selection: None,
             stubs: vec![],
             selected_stub_index: 0,
             scroll_offset: 0,
             async_channel_receiver: mpsc::channel::<ApplicationEvent>(100),
             refresh_task: None,
-        })
+        };
+        let model = ServerConnectionModel::new(&cfg, application_model.async_channel_receiver.0.clone());
+        application_model.server_selection = Some(model);
+        Ok(application_model)
     }
 
     fn switch_to_main_screen(self: &mut Self) {
         self.screen = Box::new(MainScreen::new());
     }
 
+    fn switch_to_server_selection_screen(self: &mut Self) {
+        self.screen = Box::new(ConnectionSelectionScreen::new());
+    }
+
+    fn switch_to_server_edit_screen(self: &mut Self) {
+        self.screen = Box::new(ConnectionEditScreen::new())
+    }
+
     fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.server_selection.current_selected_server().is_none() {
+        if self
+            .server_selection
+            .as_ref()
+            .unwrap()
+            .current_selected_server()
+            .is_none()
+        {
             return Err(Box::new(AppError::NoServerSelected));
         }
-        let res = get_all_stubs(self.server_selection.current_selected_server().unwrap())?;
+        let res = get_all_stubs(
+            self.server_selection
+                .as_ref()
+                .unwrap()
+                .current_selected_server()
+                .unwrap(),
+        )?;
         self.stubs = res.mappings;
         Ok(())
     }
@@ -102,7 +125,14 @@ impl App {
     }
 
     fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.stubs.is_empty() || self.server_selection.current_selected_server().is_none() {
+        if self.stubs.is_empty()
+            || self
+                .server_selection
+                .as_ref()
+                .unwrap()
+                .current_selected_server()
+                .is_none()
+        {
             return Ok(());
         }
         let idx = self.selected_stub_index.min(self.stubs.len() - 1);
@@ -110,7 +140,11 @@ impl App {
             let id = stub.id.clone();
             // Perform delete on server
             delete_stub(
-                self.server_selection.current_selected_server().unwrap(),
+                self.server_selection
+                    .as_ref()
+                    .unwrap()
+                    .current_selected_server()
+                    .unwrap(),
                 &id,
             )?;
             // Remove locally
@@ -129,20 +163,58 @@ impl App {
         Ok(())
     }
 
-    pub fn handle_event(&mut self, msg: ApplicationEvent) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn handle_event(
+        &mut self,
+        msg: ApplicationEvent,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match msg {
+            // Global events
             ApplicationEvent::SwitchToMainScreen => {
                 self.switch_to_main_screen();
                 Ok(())
             }
+            ApplicationEvent::SwitchToServerSelectionScreen => {
+                self.switch_to_server_selection_screen();
+                Ok(())
+            }
+            ApplicationEvent::SwitchToConnectionEditScreen => {
+                self.switch_to_server_edit_screen();
+                Ok(())
+            }
+            ApplicationEvent::Quit => Err(Box::new(AppError::UserExit)),
+            ApplicationEvent::None => Ok(()),
+            // Server administration events
             ApplicationEvent::ChangeServerSelectionUp => {
-                self.server_selection.change_server_selection_up();
+                self.server_selection
+                    .as_mut()
+                    .map(|s| s.change_server_selection_up());
                 Ok(())
             }
             ApplicationEvent::ChangeServerSelectionDown => {
-                self.server_selection.change_server_selection_down();
+                self.server_selection
+                    .as_mut()
+                    .map(|s| s.change_server_selection_down());
                 Ok(())
             }
+            ApplicationEvent::StartNewServerRegistration => {
+                self.server_selection
+                    .as_mut()
+                    .map(|s| s.start_new_server_registration());
+                Ok(())
+            }
+            ApplicationEvent::AddNewServer { server_url } => {
+                self.server_selection
+                    .as_mut()
+                    .map(|s| s.add_new_server(server_url));
+                Ok(())
+            }
+            ApplicationEvent::DeleteSelectedServer => {
+                self.server_selection
+                    .as_mut()
+                    .map(|s| s.delete_selected_server());
+                Ok(())
+            }
+            // Stub administration events
             ApplicationEvent::SelectNextStub => {
                 self.select_next_stub();
                 Ok(())
@@ -151,11 +223,11 @@ impl App {
                 self.select_previous_stub();
                 Ok(())
             }
-            ApplicationEvent::ScrollDetailsUp => {
+            ApplicationEvent::ScrollStubDetailsUp => {
                 self.scroll_details_up();
                 Ok(())
             }
-            ApplicationEvent::ScrollDetailsDown => {
+            ApplicationEvent::ScrollStubDetailsDown => {
                 self.scroll_details_down();
                 Ok(())
             }
@@ -163,8 +235,6 @@ impl App {
                 self.delete_selected_stub()?;
                 Ok(())
             }
-            ApplicationEvent::Quit => Err(Box::new(AppError::UserExit)),
-            ApplicationEvent::None => Ok(()),
             ApplicationEvent::ReadAllStubs => self.read_all_stubs(),
             ApplicationEvent::ToggleAutoRefreshStubs => {
                 self.toggle_auto_refresh_stubs();
@@ -174,14 +244,16 @@ impl App {
     }
 }
 
-pub struct ServerSelection {
+pub struct ServerConnectionModel {
+    pub event_sender: Sender<ApplicationEvent>,
     pub server_list: Vec<String>,
     pub current_selected_server_index: Option<usize>,
 }
 
-impl ServerSelection {
-    pub fn new(app_config: &AppConfig) -> Self {
+impl ServerConnectionModel {
+    pub fn new(app_config: &AppConfig, event_sender: Sender<ApplicationEvent>) -> Self {
         Self {
+            event_sender,
             server_list: app_config.server_list.clone(),
             current_selected_server_index: app_config.selected_server_index,
         }
@@ -211,19 +283,38 @@ impl ServerSelection {
             (self.current_selected_server_index.unwrap() + 1).min(self.server_list.len() - 1);
         self.current_selected_server_index = Some(next_index);
     }
+
+    fn add_new_server(&self, p0: String) {
+    }
+    fn start_new_server_registration(&self) {
+    }
+
+    fn delete_selected_server(&self) {
+        if self.current_selected_server_index.is_none() {
+            return;
+        }
+    }
 }
 
 pub enum ApplicationEvent {
+    None,
+    // Global events
     SwitchToMainScreen,
+    SwitchToServerSelectionScreen,
+    SwitchToConnectionEditScreen,
+    Quit,
+    // Server administration events
     ChangeServerSelectionUp,
     ChangeServerSelectionDown,
+    StartNewServerRegistration,
+    AddNewServer { server_url: String },
+    DeleteSelectedServer,
+    // Stub administration events
     SelectNextStub,
     SelectPreviousStub,
-    ScrollDetailsUp,
-    ScrollDetailsDown,
+    ScrollStubDetailsUp,
+    ScrollStubDetailsDown,
     DeleteSelectedStub,
     ReadAllStubs,
     ToggleAutoRefreshStubs,
-    Quit,
-    None,
 }

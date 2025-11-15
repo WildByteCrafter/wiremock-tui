@@ -1,4 +1,4 @@
-use crate::model::{App, ApplicationEvent};
+use crate::model::{ApplicationEvent, ApplicationModel};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -10,7 +10,7 @@ use ratatui::Frame;
 pub struct ConnectionSelectionScreen {}
 
 impl ScreenTrait for ConnectionSelectionScreen {
-    fn draw(&self, mut app: &App, f: &mut Frame) {
+    fn draw(&self, mut app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
@@ -33,6 +33,8 @@ impl ScreenTrait for ConnectionSelectionScreen {
         // Server list display
         let items: Vec<ListItem> = app
             .server_selection
+            .as_ref()
+            .unwrap()
             .server_list
             .iter()
             .enumerate()
@@ -40,6 +42,8 @@ impl ScreenTrait for ConnectionSelectionScreen {
                 let style = if i
                     == app
                         .server_selection
+                        .as_ref()
+                        .unwrap()
                         .current_selected_server_index
                         .unwrap_or(999)
                 {
