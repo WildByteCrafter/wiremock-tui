@@ -1,4 +1,4 @@
-use crate::model::{App, Msg};
+use crate::model::{App, ApplicationEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -7,9 +7,9 @@ use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
 
-pub struct ConnectionScreen {}
+pub struct ConnectionSelectionScreen {}
 
-impl ScreenTrait for ConnectionScreen {
+impl ScreenTrait for ConnectionSelectionScreen {
     fn draw(&self, mut app: &App, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
@@ -78,14 +78,14 @@ impl ScreenTrait for ConnectionScreen {
         }
     }
 
-    fn event_handling(&self) -> Result<Option<Msg>, std::io::Error> {
+    fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
         if let Event::Key(key) = event::read()? {
             let msg = match key.code {
-                KeyCode::Char('q') => Msg::Quit,
-                KeyCode::Up | KeyCode::Char('k') => Msg::ChangeServerSelectionUp,
-                KeyCode::Down | KeyCode::Char('j') => Msg::ChangeServerSelectionDown,
-                KeyCode::Enter => Msg::SwitchToMainScreen,
-                _ => Msg::None,
+                KeyCode::Char('q') => ApplicationEvent::Quit,
+                KeyCode::Up | KeyCode::Char('k') => ApplicationEvent::ChangeServerSelectionUp,
+                KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::ChangeServerSelectionDown,
+                KeyCode::Enter => ApplicationEvent::SwitchToMainScreen,
+                _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));
         }
@@ -93,8 +93,8 @@ impl ScreenTrait for ConnectionScreen {
     }
 }
 
-impl ConnectionScreen {
+impl ConnectionSelectionScreen {
     pub fn new() -> Self {
-        ConnectionScreen {}
+        ConnectionSelectionScreen {}
     }
 }

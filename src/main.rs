@@ -5,7 +5,7 @@ use crossterm::{
 };
 use io::Error;
 use model::App;
-use model::Msg;
+use model::ApplicationEvent;
 use ratatui::{backend::CrosstermBackend, Frame, Terminal};
 use std::io;
 use thiserror::Error;
@@ -66,7 +66,7 @@ async fn run_app<B: ratatui::backend::Backend>(
 
 trait ScreenTrait {
     fn draw(&self, app: &App, f: &mut Frame);
-    fn event_handling(&self) -> Result<Option<Msg>, Error>;
+    fn event_handling(&self) -> Result<Option<ApplicationEvent>, Error>;
 }
 
 #[derive(Error, Debug)]

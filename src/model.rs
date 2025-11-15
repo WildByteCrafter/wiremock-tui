@@ -1,4 +1,4 @@
-use crate::connection_screen::ConnectionScreen;
+use crate::connection_screen::ConnectionSelectionScreen;
 use crate::main_screen::MainScreen;
 use crate::wire_mock_client::{delete_stub, get_all_stubs, StubMapping};
 use crate::{AppError, ScreenTrait};
@@ -30,7 +30,7 @@ pub struct App {
     pub stubs: Vec<StubMapping>,
     pub selected_stub_index: usize,
     pub scroll_offset: usize,
-    pub async_channel_receiver: (Sender<Msg>, Receiver<Msg>),
+    pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
     pub refresh_task: Option<tokio::task::JoinHandle<()>>,
 }
 
@@ -38,12 +38,12 @@ impl App {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let cfg: AppConfig = confy::load("wm-tui", None)?;
         Ok(App {
-            screen: Box::new(ConnectionScreen::new()),
+            screen: Box::new(ConnectionSelectionScreen::new()),
             server_selection: ServerSelection::new(&cfg),
             stubs: vec![],
             selected_stub_index: 0,
             scroll_offset: 0,
-            async_channel_receiver: mpsc::channel::<Msg>(100),
+            async_channel_receiver: mpsc::channel::<ApplicationEvent>(100),
             refresh_task: None,
         })
     }
@@ -93,7 +93,7 @@ impl App {
             interval.tick().await;
             loop {
                 interval.tick().await;
-                if send.send(Msg::ReadAllStubs).await.is_err() {
+                if send.send(ApplicationEvent::ReadAllStubs).await.is_err() {
                     break;
                 }
             }
@@ -129,44 +129,44 @@ impl App {
         Ok(())
     }
 
-    pub fn handle_event(&mut self, msg: Msg) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn handle_event(&mut self, msg: ApplicationEvent) -> Result<(), Box<dyn std::error::Error>> {
         match msg {
-            Msg::SwitchToMainScreen => {
+            ApplicationEvent::SwitchToMainScreen => {
                 self.switch_to_main_screen();
                 Ok(())
             }
-            Msg::ChangeServerSelectionUp => {
+            ApplicationEvent::ChangeServerSelectionUp => {
                 self.server_selection.change_server_selection_up();
                 Ok(())
             }
-            Msg::ChangeServerSelectionDown => {
+            ApplicationEvent::ChangeServerSelectionDown => {
                 self.server_selection.change_server_selection_down();
                 Ok(())
             }
-            Msg::SelectNextStub => {
+            ApplicationEvent::SelectNextStub => {
                 self.select_next_stub();
                 Ok(())
             }
-            Msg::SelectPreviousStub => {
+            ApplicationEvent::SelectPreviousStub => {
                 self.select_previous_stub();
                 Ok(())
             }
-            Msg::ScrollDetailsUp => {
+            ApplicationEvent::ScrollDetailsUp => {
                 self.scroll_details_up();
                 Ok(())
             }
-            Msg::ScrollDetailsDown => {
+            ApplicationEvent::ScrollDetailsDown => {
                 self.scroll_details_down();
                 Ok(())
             }
-            Msg::DeleteSelectedStub => {
+            ApplicationEvent::DeleteSelectedStub => {
                 self.delete_selected_stub()?;
                 Ok(())
             }
-            Msg::Quit => Err(Box::new(AppError::UserExit)),
-            Msg::None => Ok(()),
-            Msg::ReadAllStubs => self.read_all_stubs(),
-            Msg::ToggleAutoRefreshStubs => {
+            ApplicationEvent::Quit => Err(Box::new(AppError::UserExit)),
+            ApplicationEvent::None => Ok(()),
+            ApplicationEvent::ReadAllStubs => self.read_all_stubs(),
+            ApplicationEvent::ToggleAutoRefreshStubs => {
                 self.toggle_auto_refresh_stubs();
                 Ok(())
             }
@@ -213,7 +213,7 @@ impl ServerSelection {
     }
 }
 
-pub enum Msg {
+pub enum ApplicationEvent {
     SwitchToMainScreen,
     ChangeServerSelectionUp,
     ChangeServerSelectionDown,

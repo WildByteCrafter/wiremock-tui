@@ -1,4 +1,4 @@
-use crate::model::{App, Msg};
+use crate::model::{App, ApplicationEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -131,18 +131,18 @@ impl ScreenTrait for MainScreen {
         }
     }
 
-    fn event_handling(&self) -> Result<Option<Msg>, std::io::Error> {
+    fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
         if let Event::Key(key) = event::read()? {
             let msg = match key.code {
-                KeyCode::Char('a') => Msg::ToggleAutoRefreshStubs,
-                KeyCode::Char('r') => Msg::ReadAllStubs,
-                KeyCode::Char('q') => Msg::Quit,
-                KeyCode::Char('d') => Msg::DeleteSelectedStub,
-                KeyCode::Up | KeyCode::Char('k') => Msg::SelectPreviousStub,
-                KeyCode::Down | KeyCode::Char('j') => Msg::SelectNextStub,
-                KeyCode::PageUp => Msg::ScrollDetailsUp,
-                KeyCode::PageDown => Msg::ScrollDetailsDown,
-                _ => Msg::None,
+                KeyCode::Char('a') => ApplicationEvent::ToggleAutoRefreshStubs,
+                KeyCode::Char('r') => ApplicationEvent::ReadAllStubs,
+                KeyCode::Char('q') => ApplicationEvent::Quit,
+                KeyCode::Char('d') => ApplicationEvent::DeleteSelectedStub,
+                KeyCode::Up | KeyCode::Char('k') => ApplicationEvent::SelectPreviousStub,
+                KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::SelectNextStub,
+                KeyCode::PageUp => ApplicationEvent::ScrollDetailsUp,
+                KeyCode::PageDown => ApplicationEvent::ScrollDetailsDown,
+                _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));
         }
