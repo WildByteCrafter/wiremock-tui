@@ -88,6 +88,7 @@ impl ScreenTrait for ConnectionSelectionScreen {
                 KeyCode::Char('q') => ApplicationEvent::Quit,
                 KeyCode::Up | KeyCode::Char('k') => ApplicationEvent::ChangeServerSelectionUp,
                 KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::ChangeServerSelectionDown,
+                KeyCode::Char('e') => ApplicationEvent::SwitchToConnectionEditScreen,
                 KeyCode::Enter => ApplicationEvent::SwitchToMainScreen,
                 _ => ApplicationEvent::None,
             };
