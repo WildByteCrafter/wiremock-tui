@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, ApplicationModel};
+use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent, ServerEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -10,7 +10,7 @@ use ratatui::Frame;
 pub struct ConnectionSelectionScreen {}
 
 impl ScreenTrait for ConnectionSelectionScreen {
-    fn draw(&self, mut app: &ApplicationModel, f: &mut Frame) {
+    fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
@@ -33,8 +33,6 @@ impl ScreenTrait for ConnectionSelectionScreen {
         // Server list display
         let items: Vec<ListItem> = app
             .server_selection
-            .as_ref()
-            .unwrap()
             .server_list
             .iter()
             .enumerate()
@@ -42,8 +40,6 @@ impl ScreenTrait for ConnectionSelectionScreen {
                 let style = if i
                     == app
                         .server_selection
-                        .as_ref()
-                        .unwrap()
                         .current_selected_server_index
                         .unwrap_or(999)
                 {
@@ -85,11 +81,18 @@ impl ScreenTrait for ConnectionSelectionScreen {
     fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
         if let Event::Key(key) = event::read()? {
             let msg = match key.code {
-                KeyCode::Char('q') => ApplicationEvent::Quit,
-                KeyCode::Up | KeyCode::Char('k') => ApplicationEvent::ChangeServerSelectionUp,
-                KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::ChangeServerSelectionDown,
-                KeyCode::Char('e') => ApplicationEvent::SwitchToConnectionEditScreen,
-                KeyCode::Enter => ApplicationEvent::SwitchToMainScreen,
+                KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
+                KeyCode::Up | KeyCode::Char('k') => {
+                    ApplicationEvent::Server(ServerEvent::ChangeSelectionUp)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    ApplicationEvent::Server(ServerEvent::ChangeSelectionDown)
+                }
+
+                KeyCode::Char('e') => {
+                    ApplicationEvent::Global(GlobalEvent::SwitchToConnectionEditScreen)
+                }
+                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToMainScreen),
                 _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));

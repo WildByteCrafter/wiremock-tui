@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, ApplicationModel};
+use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -57,8 +57,8 @@ impl ScreenTrait for ConnectionEditScreen {
     fn event_handling(&self) -> Result<Option<ApplicationEvent>, Error> {
         if let Event::Key(key) = event::read()? {
             let msg = match key.code {
-                KeyCode::Char('q') => ApplicationEvent::Quit,
-                KeyCode::Enter => ApplicationEvent::SwitchToServerSelectionScreen,
+                KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
+                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToMainScreen),
                 _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));
