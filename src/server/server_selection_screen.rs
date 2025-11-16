@@ -1,12 +1,12 @@
-use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::model::ScreenTrait;
+use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
+use crate::server::model::ServerEvent;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
-use crate::server::model::ServerEvent;
 
 pub struct ServerSelectionScreen {}
 
@@ -81,22 +81,22 @@ impl ScreenTrait for ServerSelectionScreen {
 
     fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
         if let Event::Key(key) = event::read()? {
-            let msg = match key.code {
-                KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
-                KeyCode::Up | KeyCode::Char('k') => {
-                    ApplicationEvent::Server(ServerEvent::ChangeSelectionUp)
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    ApplicationEvent::Server(ServerEvent::ChangeSelectionDown)
-                }
-
-                KeyCode::Char('e') => {
-                    ApplicationEvent::Global(GlobalEvent::SwitchToConnectionEditScreen)
-                }
-                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen),
-                _ => ApplicationEvent::None,
+            return match key.code {
+                KeyCode::Char('q') => Ok(Some(ApplicationEvent::Global(GlobalEvent::Quit))),
+                KeyCode::Up | KeyCode::Char('k') => Ok(Some(ApplicationEvent::Server(
+                    ServerEvent::ChangeSelectionUp,
+                ))),
+                KeyCode::Down | KeyCode::Char('j') => Ok(Some(ApplicationEvent::Server(
+                    ServerEvent::ChangeSelectionDown,
+                ))),
+                KeyCode::Char('e') => Ok(Some(ApplicationEvent::Global(
+                    GlobalEvent::SwitchToConnectionEditScreen,
+                ))),
+                KeyCode::Enter => Ok(Some(ApplicationEvent::Global(
+                    GlobalEvent::SwitchToStubScreen,
+                ))),
+                _ => Ok(None),
             };
-            return Ok(Some(msg));
         }
         Ok(None)
     }

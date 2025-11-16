@@ -1,12 +1,15 @@
+use crate::model::{ApplicationEvent, Command, ModelTrait};
 use crossterm::{
     event::{self},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use model::{AppError, GlobalError, ScreenTrait};
 use model::ApplicationModel;
+use model::{AppError, GlobalError, ScreenTrait};
 use ratatui::{backend::CrosstermBackend, Terminal};
+use std::error::Error;
 use std::io;
+
 mod configuration;
 mod model;
 mod server;
@@ -39,10 +42,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut ApplicationModel,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn Error>> {
     loop {
         if let Ok(msg) = app.async_channel_receiver.1.try_recv() {
-            app.handle_event(msg)?;
+            handle_event(app, msg)?;
         }
 
         // Draw current screen
@@ -51,7 +54,7 @@ async fn run_app<B: ratatui::backend::Backend>(
         // Handle input
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Some(msg) = app.screen.event_handling()? {
-                if let Err(e) = app.handle_event(msg) {
+                if let Err(e) = handle_event(app, msg) {
                     if let Some(app_error) = e.downcast_ref::<AppError>() {
                         if let AppError::Global(GlobalError::UserRequestedExit) = app_error {
                             return Ok(());
@@ -64,3 +67,13 @@ async fn run_app<B: ratatui::backend::Backend>(
     }
 }
 
+pub fn handle_event(
+    application_model: &mut ApplicationModel,
+    msg: ApplicationEvent,
+) -> Result<Option<Command>, Box<dyn Error>> {
+    match msg {
+        ApplicationEvent::Global(ev) => application_model.handle_event(ev),
+        ApplicationEvent::Server(ev) => application_model.server_selection.handle_event(ev),
+        ApplicationEvent::Stub(ev) => application_model.stub_model.handle_event(ev),
+    }
+}

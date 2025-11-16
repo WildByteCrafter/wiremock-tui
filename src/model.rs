@@ -2,21 +2,43 @@ use crate::server::model::{ServerEvent, ServerModel};
 use crate::server::server_edit_screen::ServerEditScreen;
 use crate::server::server_selection_screen::ServerSelectionScreen;
 use crate::stub::stub_screen::StubScreen;
+use crate::{configuration, stub};
+use ratatui::Frame;
 use std::error::Error;
 use std::io;
+use stub::model::StubEvent;
+use stub::model::StubModel;
+use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use stub::model::StubModel;
-use stub::model::StubEvent;
-use thiserror::Error;
-use ratatui::Frame;
-use crate::{configuration, stub};
 
 pub struct ApplicationModel {
     pub screen: Box<dyn ScreenTrait>,
     pub server_selection: ServerModel,
     pub stub_model: StubModel,
     pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
+}
+
+impl ModelTrait<GlobalEvent> for ApplicationModel {
+    fn handle_event(&mut self, event: GlobalEvent) -> Result<Option<Command>, Box<dyn Error>> {
+        match event {
+            GlobalEvent::SwitchToStubScreen => {
+                let selected_server = self.server_selection.current_selected_server();
+                self.stub_model.selected_server_url = selected_server.cloned();
+                self.switch_to_main_screen();
+                Ok(None)
+            }
+            GlobalEvent::SwitchToServerSelectionScreen => {
+                self.switch_to_server_selection_screen();
+                Ok(None)
+            }
+            GlobalEvent::SwitchToConnectionEditScreen => {
+                self.switch_to_server_edit_screen();
+                Ok(None)
+            }
+            GlobalEvent::Quit => Err(Box::new(GlobalError::UserRequestedExit)),
+        }
+    }
 }
 
 impl ApplicationModel {
@@ -42,55 +64,27 @@ impl ApplicationModel {
     fn switch_to_server_edit_screen(self: &mut Self) {
         self.screen = Box::new(ServerEditScreen::new())
     }
-
-    pub fn handle_event(&mut self, msg: ApplicationEvent) -> Result<(), Box<dyn Error>> {
-        match msg {
-            ApplicationEvent::None => Ok(()),
-            ApplicationEvent::Global(ev) => self.handle_global_event(ev),
-            ApplicationEvent::Server(ev) => self.server_selection.handle_event(ev),
-            ApplicationEvent::Stub(ev) => self.stub_model.handle_event(ev),
-        }
-    }
-
-    fn handle_global_event(&mut self, ev: GlobalEvent) -> Result<(), Box<dyn Error>> {
-        match ev {
-            GlobalEvent::SwitchToStubScreen => {
-                let selected_server = self.server_selection.current_selected_server();
-                self.stub_model.selected_server_url = selected_server.cloned();
-                self.switch_to_main_screen();
-                Ok(())
-            }
-            GlobalEvent::SwitchToServerSelectionScreen => {
-                self.switch_to_server_selection_screen();
-                Ok(())
-            }
-            GlobalEvent::SwitchToConnectionEditScreen => {
-                self.switch_to_server_edit_screen();
-                Ok(())
-            }
-            GlobalEvent::Quit => Err(Box::new(GlobalError::UserRequestedExit)),
-        }
-    }
 }
-
 
 pub enum Command {
     None,
 }
 
 pub enum ApplicationEvent {
-    None,
     Global(GlobalEvent),
     Server(ServerEvent),
     Stub(StubEvent),
 }
-
 
 pub enum GlobalEvent {
     SwitchToStubScreen,
     SwitchToServerSelectionScreen,
     SwitchToConnectionEditScreen,
     Quit,
+}
+
+pub trait ModelTrait<T> {
+    fn handle_event(&mut self, event: T) -> Result<Option<Command>, Box<dyn Error>>;
 }
 
 pub trait ScreenTrait {

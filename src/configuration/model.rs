@@ -1,6 +1,7 @@
-use crate::model::ApplicationEvent;
 use crate::model::AppError;
+use crate::model::{ApplicationEvent, Command, ModelTrait};
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 
@@ -22,6 +23,12 @@ impl Default for RootConfiguration {
 struct ConfigurationModel {
     event_sender: Sender<ApplicationEvent>,
     app_config: RootConfiguration,
+}
+
+impl ModelTrait<ConfigurationEvent> for ConfigurationModel {
+    fn handle_event(&mut self, msg: ConfigurationEvent) -> Result<Option<Command>, Box<dyn Error>> {
+        todo!()
+    }
 }
 
 impl ConfigurationModel {

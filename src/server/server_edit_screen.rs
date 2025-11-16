@@ -56,12 +56,11 @@ impl ScreenTrait for ServerEditScreen {
 
     fn event_handling(&self) -> Result<Option<ApplicationEvent>, Error> {
         if let Event::Key(key) = event::read()? {
-            let msg = match key.code {
-                KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
-                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen),
-                _ => ApplicationEvent::None,
-            };
-            return Ok(Some(msg));
+            return match key.code {
+                KeyCode::Char('q') => Ok(Some(ApplicationEvent::Global(GlobalEvent::Quit))),
+                KeyCode::Enter => Ok(Some(ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen))),
+                _ => Ok(None)
+            }
         }
         Ok(None)
     }

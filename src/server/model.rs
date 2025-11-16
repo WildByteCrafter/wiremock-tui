@@ -1,4 +1,4 @@
-use crate::model::ApplicationEvent;
+use crate::model::{ApplicationEvent, Command, ModelTrait};
 use std::error::Error;
 use tokio::sync::mpsc::Sender;
 
@@ -8,37 +8,39 @@ pub struct ServerModel {
     pub current_selected_server_index: Option<usize>,
 }
 
+impl ModelTrait<ServerEvent> for ServerModel {
+    fn handle_event(&mut self, event: ServerEvent) -> Result<Option<Command>, Box<dyn Error>> {
+        match event {
+            ServerEvent::ChangeSelectionUp => {
+                self.change_server_selection_up();
+                Ok(None)
+            }
+            ServerEvent::ChangeSelectionDown => {
+                self.change_server_selection_down();
+                Ok(None)
+            }
+            ServerEvent::StartNewServerRegistration => {
+                self.start_new_server_registration();
+                Ok(None)
+            }
+            ServerEvent::AddNewServer { server_url } => {
+                self.add_new_server(server_url);
+                Ok(None)
+            }
+            ServerEvent::DeleteSelectedServer => {
+                self.delete_selected_server();
+                Ok((None))
+            }
+        }
+    }
+}
+
 impl ServerModel {
     pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
         Self {
             event_sender,
             server_list: vec![],
             current_selected_server_index: None,
-        }
-    }
-
-    pub fn handle_event(&mut self, ev: ServerEvent) -> Result<(), Box<dyn Error>> {
-        match ev {
-            ServerEvent::ChangeSelectionUp => {
-                self.change_server_selection_up();
-                Ok(())
-            }
-            ServerEvent::ChangeSelectionDown => {
-                self.change_server_selection_down();
-                Ok(())
-            }
-            ServerEvent::StartNewServerRegistration => {
-                self.start_new_server_registration();
-                Ok(())
-            }
-            ServerEvent::AddNewServer { server_url } => {
-                self.add_new_server(server_url);
-                Ok(())
-            }
-            ServerEvent::DeleteSelectedServer => {
-                self.delete_selected_server();
-                Ok(())
-            }
         }
     }
 

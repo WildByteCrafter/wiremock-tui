@@ -135,7 +135,7 @@ impl ScreenTrait for StubScreen {
 
     fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
         if let Event::Key(key) = event::read()? {
-            let msg = match key.code {
+            return Ok(Some(match key.code {
                 KeyCode::Char('a') => ApplicationEvent::Stub(StubEvent::ToggleAutoRefresh),
                 KeyCode::Char('r') => ApplicationEvent::Stub(StubEvent::ReadAllStubs),
                 KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
@@ -146,9 +146,8 @@ impl ScreenTrait for StubScreen {
                 KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::Stub(StubEvent::SelectNext),
                 KeyCode::PageUp => ApplicationEvent::Stub(StubEvent::ScrollDetailsUp),
                 KeyCode::PageDown => ApplicationEvent::Stub(StubEvent::ScrollDetailsDown),
-                _ => ApplicationEvent::None,
-            };
-            return Ok(Some(msg));
+                _ => return Ok(None),
+            }));
         }
         Ok(None)
     }

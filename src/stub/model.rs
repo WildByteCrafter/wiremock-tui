@@ -1,4 +1,4 @@
-use crate::model::ApplicationEvent;
+use crate::model::{ApplicationEvent, Command, ModelTrait};
 use crate::wire_mock;
 use std::error::Error;
 use std::time::Duration;
@@ -15,6 +15,38 @@ pub struct StubModel {
     pub refresh_task: Option<tokio::task::JoinHandle<()>>,
 }
 
+impl ModelTrait<StubEvent> for StubModel {
+    fn handle_event(&mut self, event: StubEvent) -> Result<Option<Command>, Box<dyn Error>> {
+        match event {
+            StubEvent::SelectNext => {
+                self.select_next_stub();
+                Ok(None)
+            }
+            StubEvent::SelectPrevious => {
+                self.select_previous_stub();
+                Ok((None))
+            }
+            StubEvent::ScrollDetailsUp => {
+                self.scroll_details_up();
+                Ok(None)
+            }
+            StubEvent::ScrollDetailsDown => {
+                self.scroll_details_down();
+                Ok((None))
+            }
+            StubEvent::DeleteSelected => {
+                self.delete_selected_stub()?;
+                Ok(None)
+            }
+            StubEvent::ReadAllStubs => Ok(None),
+            StubEvent::ToggleAutoRefresh => {
+                self.toggle_auto_refresh_stubs();
+                Ok((None))
+            }
+        }
+    }
+}
+
 impl StubModel {
     pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
         Self {
@@ -24,36 +56,6 @@ impl StubModel {
             selected_stub_index: 0,
             scroll_offset: 0,
             refresh_task: None,
-        }
-    }
-
-    pub fn handle_event(&mut self, ev: StubEvent) -> Result<(), Box<dyn Error>> {
-        match ev {
-            StubEvent::SelectNext => {
-                self.select_next_stub();
-                Ok(())
-            }
-            StubEvent::SelectPrevious => {
-                self.select_previous_stub();
-                Ok(())
-            }
-            StubEvent::ScrollDetailsUp => {
-                self.scroll_details_up();
-                Ok(())
-            }
-            StubEvent::ScrollDetailsDown => {
-                self.scroll_details_down();
-                Ok(())
-            }
-            StubEvent::DeleteSelected => {
-                self.delete_selected_stub()?;
-                Ok(())
-            }
-            StubEvent::ReadAllStubs => self.read_all_stubs(),
-            StubEvent::ToggleAutoRefresh => {
-                self.toggle_auto_refresh_stubs();
-                Ok(())
-            }
         }
     }
 
@@ -151,4 +153,3 @@ pub enum StubError {
     #[error("No server selected")]
     NoServerSelected,
 }
-
