@@ -4,17 +4,17 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use io::Error;
-use model::ApplicationModel;
 use model::ApplicationEvent;
+use model::ApplicationModel;
 use ratatui::{backend::CrosstermBackend, Frame, Terminal};
 use std::io;
 use thiserror::Error;
 
-mod connection_selection_screen;
-mod stub_screen;
-mod model;
-mod wire_mock_client;
 mod connection_edit_screen;
+mod connection_selection_screen;
+mod model;
+mod stub_screen;
+mod wire_mock_client;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -76,4 +76,6 @@ enum AppError {
     UserExit,
     #[error("No wire mock server selected")]
     NoServerSelected,
+    #[error("Failed to store configuration: {0}")]
+    StoreConfigurationError(String),
 }

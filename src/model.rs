@@ -32,6 +32,7 @@ pub struct ApplicationModel {
     pub screen: Box<dyn ScreenTrait>,
     pub server_selection: ServerConnectionModel,
     pub stub_model: StubModel,
+    pub config: AppConfig,
     pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
 }
 
@@ -43,12 +44,17 @@ impl ApplicationModel {
             screen: Box::new(ConnectionSelectionScreen::new()),
             server_selection: ServerConnectionModel::new(&cfg, event_channel.0.clone()),
             stub_model: StubModel::new(event_channel.0.clone()),
+            config: cfg,
             async_channel_receiver: event_channel,
         };
         Ok(application_model)
     }
 
-    fn save_configuration(&self) {}
+    fn save_configuration(&mut self) -> Result<(), AppError> {
+        self.config.selected_server_index = self.server_selection.current_selected_server_index;
+        self.config.server_list = self.server_selection.server_list.clone();
+        confy::store("wm-tui", None, &self.config).map_err(|e| AppError::StoreConfigurationError(e.to_string()))
+    }
 
     fn switch_to_main_screen(self: &mut Self) {
         self.screen = Box::new(StubScreen::new());
@@ -88,7 +94,7 @@ impl ApplicationModel {
                 Ok(())
             }
             GlobalEvent::SaveConfiguration => {
-                self.save_configuration();
+                self.save_configuration()?;
                 Ok(())
             }
             GlobalEvent::Quit => Err(Box::new(AppError::UserExit)),
