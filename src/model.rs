@@ -1,7 +1,10 @@
 use crate::connection_edit_screen::ConnectionEditScreen;
 use crate::connection_selection_screen::ConnectionSelectionScreen;
-use crate::main_screen::MainScreen;
-use crate::model::StubEvent::ReadAllStubs;
+use crate::model::StubEvent::{
+    DeleteSelected, ReadAllStubs, ScrollDetailsDown, ScrollDetailsUp, SelectNext, SelectPrevious,
+    ToggleAutoRefresh,
+};
+use crate::stub_screen::StubScreen;
 use crate::wire_mock_client::{delete_stub, get_all_stubs, StubMapping};
 use crate::{AppError, ScreenTrait};
 use serde::{Deserialize, Serialize};
@@ -28,32 +31,27 @@ impl Default for AppConfig {
 pub struct ApplicationModel {
     pub screen: Box<dyn ScreenTrait>,
     pub server_selection: ServerConnectionModel,
-    pub stubs: Vec<StubMapping>,
-    pub selected_stub_index: usize,
-    pub scroll_offset: usize,
+    pub stub_model: StubModel,
     pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
-    pub refresh_task: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl ApplicationModel {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let cfg: AppConfig = confy::load("wm-tui", None)?;
         let event_channel = mpsc::channel::<ApplicationEvent>(100);
-        let model = ServerConnectionModel::new(&cfg, event_channel.0.clone());
         let application_model = ApplicationModel {
             screen: Box::new(ConnectionSelectionScreen::new()),
-            server_selection: model,
-            stubs: vec![],
-            selected_stub_index: 0,
-            scroll_offset: 0,
+            server_selection: ServerConnectionModel::new(&cfg, event_channel.0.clone()),
+            stub_model: StubModel::new(event_channel.0.clone()),
             async_channel_receiver: event_channel,
-            refresh_task: None,
         };
         Ok(application_model)
     }
 
+    fn save_configuration(&self) {}
+
     fn switch_to_main_screen(self: &mut Self) {
-        self.screen = Box::new(MainScreen::new());
+        self.screen = Box::new(StubScreen::new());
     }
 
     fn switch_to_server_selection_screen(self: &mut Self) {
@@ -64,99 +62,20 @@ impl ApplicationModel {
         self.screen = Box::new(ConnectionEditScreen::new())
     }
 
-    fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.server_selection.current_selected_server().is_none() {
-            return Err(Box::new(AppError::NoServerSelected));
-        }
-        let res = get_all_stubs(self.server_selection.current_selected_server().unwrap())?;
-        self.stubs = res.mappings;
-        Ok(())
-    }
-
-    fn select_next_stub(&mut self) {
-        if self.stubs.is_empty() {
-            return;
-        }
-        self.selected_stub_index = (self.selected_stub_index + 1).min(self.stubs.len() - 1);
-        self.scroll_offset = 0;
-    }
-
-    fn select_previous_stub(&mut self) {
-        self.selected_stub_index = self.selected_stub_index.saturating_sub(1);
-        self.scroll_offset = 0; // Reset scroll when changing stub
-    }
-
-    fn scroll_details_up(&mut self) {
-        self.scroll_offset = self.scroll_offset.saturating_sub(1);
-    }
-
-    fn scroll_details_down(&mut self) {
-        self.scroll_offset += 1;
-    }
-
-    fn toggle_auto_refresh_stubs(&mut self) {
-        if let Some(task) = self.refresh_task.take() {
-            task.abort();
-            return;
-        }
-        let send = self.async_channel_receiver.0.clone();
-        let task = tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(1));
-            interval.tick().await;
-            loop {
-                interval.tick().await;
-                if send
-                    .send(ApplicationEvent::Stub(ReadAllStubs))
-                    .await
-                    .is_err()
-                {
-                    break;
-                }
-            }
-        });
-        self.refresh_task = Some(task);
-    }
-
-    fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.stubs.is_empty() || self.server_selection.current_selected_server().is_none() {
-            return Ok(());
-        }
-        let idx = self.selected_stub_index.min(self.stubs.len() - 1);
-        if let Some(stub) = self.stubs.get(idx) {
-            let id = stub.id.clone();
-            // Perform delete on server
-            delete_stub(
-                self.server_selection.current_selected_server().unwrap(),
-                &id,
-            )?;
-            // Remove locally
-            self.stubs.remove(idx);
-            // Adjust selection
-            if self.stubs.is_empty() {
-                self.selected_stub_index = 0;
-                self.scroll_offset = 0;
-            } else {
-                if idx >= self.stubs.len() {
-                    self.selected_stub_index = self.stubs.len() - 1;
-                }
-                self.scroll_offset = 0;
-            }
-        }
-        Ok(())
-    }
-
     pub fn handle_event(&mut self, msg: ApplicationEvent) -> Result<(), Box<dyn Error>> {
         match msg {
             ApplicationEvent::None => Ok(()),
             ApplicationEvent::Global(ev) => self.handle_global_event(ev),
             ApplicationEvent::Server(ev) => self.server_selection.handle_event(ev),
-            ApplicationEvent::Stub(ev) => self.handle_stub_event(ev),
+            ApplicationEvent::Stub(ev) => self.stub_model.handle_event(ev),
         }
     }
 
     fn handle_global_event(&mut self, ev: GlobalEvent) -> Result<(), Box<dyn Error>> {
         match ev {
-            GlobalEvent::SwitchToMainScreen => {
+            GlobalEvent::SwitchToStubScreen => {
+                let selected_server = self.server_selection.current_selected_server();
+                self.stub_model.selected_server_url = selected_server.cloned();
                 self.switch_to_main_screen();
                 Ok(())
             }
@@ -168,38 +87,11 @@ impl ApplicationModel {
                 self.switch_to_server_edit_screen();
                 Ok(())
             }
+            GlobalEvent::SaveConfiguration => {
+                self.save_configuration();
+                Ok(())
+            }
             GlobalEvent::Quit => Err(Box::new(AppError::UserExit)),
-        }
-    }
-
-    fn handle_stub_event(&mut self, ev: StubEvent) -> Result<(), Box<dyn std::error::Error>> {
-        use StubEvent::*;
-        match ev {
-            SelectNext => {
-                self.select_next_stub();
-                Ok(())
-            }
-            SelectPrevious => {
-                self.select_previous_stub();
-                Ok(())
-            }
-            ScrollDetailsUp => {
-                self.scroll_details_up();
-                Ok(())
-            }
-            ScrollDetailsDown => {
-                self.scroll_details_down();
-                Ok(())
-            }
-            DeleteSelected => {
-                self.delete_selected_stub()?;
-                Ok(())
-            }
-            ReadAllStubs => self.read_all_stubs(),
-            ToggleAutoRefresh => {
-                self.toggle_auto_refresh_stubs();
-                Ok(())
-            }
         }
     }
 }
@@ -279,10 +171,142 @@ impl ServerConnectionModel {
     }
 }
 
+pub struct StubModel {
+    pub selected_server_url: Option<String>,
+    pub event_sender: Sender<ApplicationEvent>,
+    pub stubs: Vec<StubMapping>,
+    pub selected_stub_index: usize,
+    pub scroll_offset: usize,
+    pub refresh_task: Option<tokio::task::JoinHandle<()>>,
+}
+
+impl StubModel {
+    fn new(event_sender: Sender<ApplicationEvent>) -> Self {
+        Self {
+            selected_server_url: None,
+            event_sender,
+            stubs: vec![],
+            selected_stub_index: 0,
+            scroll_offset: 0,
+            refresh_task: None,
+        }
+    }
+
+    fn handle_event(&mut self, ev: StubEvent) -> Result<(), Box<dyn Error>> {
+        use StubEvent::*;
+        match ev {
+            SelectNext => {
+                self.select_next_stub();
+                Ok(())
+            }
+            SelectPrevious => {
+                self.select_previous_stub();
+                Ok(())
+            }
+            ScrollDetailsUp => {
+                self.scroll_details_up();
+                Ok(())
+            }
+            ScrollDetailsDown => {
+                self.scroll_details_down();
+                Ok(())
+            }
+            DeleteSelected => {
+                self.delete_selected_stub()?;
+                Ok(())
+            }
+            ReadAllStubs => self.read_all_stubs(),
+            ToggleAutoRefresh => {
+                self.toggle_auto_refresh_stubs();
+                Ok(())
+            }
+        }
+    }
+
+    fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
+        if self.selected_server_url.is_none() {
+            return Err(Box::new(AppError::NoServerSelected));
+        }
+        let res = get_all_stubs(&self.selected_server_url.as_ref().unwrap())?;
+        self.stubs = res.mappings;
+        Ok(())
+    }
+
+    fn select_next_stub(&mut self) {
+        if self.stubs.is_empty() {
+            return;
+        }
+        self.selected_stub_index = (self.selected_stub_index + 1).min(self.stubs.len() - 1);
+        self.scroll_offset = 0;
+    }
+
+    fn select_previous_stub(&mut self) {
+        self.selected_stub_index = self.selected_stub_index.saturating_sub(1);
+        self.scroll_offset = 0; // Reset scroll when changing stub
+    }
+
+    fn scroll_details_up(&mut self) {
+        self.scroll_offset = self.scroll_offset.saturating_sub(1);
+    }
+
+    fn scroll_details_down(&mut self) {
+        self.scroll_offset += 1;
+    }
+
+    fn toggle_auto_refresh_stubs(&mut self) {
+        if let Some(task) = self.refresh_task.take() {
+            task.abort();
+            return;
+        }
+        let sender = self.event_sender.clone();
+        let task = tokio::spawn(async move {
+            let mut interval = interval(Duration::from_secs(1));
+            interval.tick().await;
+            loop {
+                interval.tick().await;
+                if sender
+                    .send(ApplicationEvent::Stub(ReadAllStubs))
+                    .await
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+        self.refresh_task = Some(task);
+    }
+
+    fn delete_selected_stub(&mut self) -> Result<(), Box<dyn Error>> {
+        if self.stubs.is_empty() || self.selected_server_url.is_none() {
+            return Ok(());
+        }
+        let idx = self.selected_stub_index.min(self.stubs.len() - 1);
+        if let Some(stub) = self.stubs.get(idx) {
+            let id = stub.id.clone();
+            // Perform delete on server
+            delete_stub(self.selected_server_url.as_ref().unwrap(), &id)?;
+            // Remove locally
+            self.stubs.remove(idx);
+            // Adjust selection
+            if self.stubs.is_empty() {
+                self.selected_stub_index = 0;
+                self.scroll_offset = 0;
+            } else {
+                if idx >= self.stubs.len() {
+                    self.selected_stub_index = self.stubs.len() - 1;
+                }
+                self.scroll_offset = 0;
+            }
+        }
+        Ok(())
+    }
+}
+
 pub enum GlobalEvent {
-    SwitchToMainScreen,
+    SwitchToStubScreen,
     SwitchToServerSelectionScreen,
     SwitchToConnectionEditScreen,
+    SaveConfiguration,
     Quit,
 }
 

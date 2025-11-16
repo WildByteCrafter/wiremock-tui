@@ -92,7 +92,7 @@ impl ScreenTrait for ConnectionSelectionScreen {
                 KeyCode::Char('e') => {
                     ApplicationEvent::Global(GlobalEvent::SwitchToConnectionEditScreen)
                 }
-                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToMainScreen),
+                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen),
                 _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));

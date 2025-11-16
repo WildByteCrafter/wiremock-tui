@@ -58,7 +58,7 @@ impl ScreenTrait for ConnectionEditScreen {
         if let Event::Key(key) = event::read()? {
             let msg = match key.code {
                 KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
-                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToMainScreen),
+                KeyCode::Enter => ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen),
                 _ => ApplicationEvent::None,
             };
             return Ok(Some(msg));

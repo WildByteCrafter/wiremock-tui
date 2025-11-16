@@ -7,19 +7,19 @@ use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
 
-pub struct MainScreen {}
+pub struct StubScreen {}
 
-impl MainScreen {
+impl StubScreen {
     pub fn new() -> Self {
-        MainScreen {}
+        StubScreen {}
     }
 
     fn get_stub_details(&self, app: &ApplicationModel) -> String {
-        if app.stubs.is_empty() {
+        if app.stub_model.stubs.is_empty() {
             return "No stubs available".to_string();
         }
 
-        let stub = &app.stubs[app.selected_stub_index];
+        let stub = &app.stub_model.stubs[app.stub_model.selected_stub_index];
 
         // Format as JSON for readability
         match serde_json::to_string_pretty(&stub) {
@@ -29,7 +29,7 @@ impl MainScreen {
     }
 }
 
-impl ScreenTrait for MainScreen {
+impl ScreenTrait for StubScreen {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
@@ -58,6 +58,7 @@ impl ScreenTrait for MainScreen {
 
         // Stubs list display (left side)
         let items: Vec<ListItem> = app
+            .stub_model
             .stubs
             .iter()
             .enumerate()
@@ -69,7 +70,7 @@ impl ScreenTrait for MainScreen {
                     .map(|s| s.as_str())
                     .unwrap_or("(no url)");
 
-                let (text, style) = if i == app.selected_stub_index {
+                let (text, style) = if i == app.stub_model.selected_stub_index {
                     (
                         format!("▶ {} {}", stub.request.method, url),
                         Style::default()
@@ -102,7 +103,7 @@ impl ScreenTrait for MainScreen {
             .block(Block::default().borders(Borders::ALL).title("Details"))
             .style(Style::default().fg(Color::White))
             .wrap(Wrap { trim: false })
-            .scroll((app.scroll_offset as u16, 0));
+            .scroll((app.stub_model.scroll_offset as u16, 0));
 
         f.render_widget(details_paragraph, content_layout[1]);
 

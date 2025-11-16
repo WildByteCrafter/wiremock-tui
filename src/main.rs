@@ -11,7 +11,7 @@ use std::io;
 use thiserror::Error;
 
 mod connection_selection_screen;
-mod main_screen;
+mod stub_screen;
 mod model;
 mod wire_mock_client;
 mod connection_edit_screen;
