@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent, ServerEvent};
+use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -6,10 +6,11 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
+use crate::server::model::ServerEvent;
 
-pub struct ConnectionSelectionScreen {}
+pub struct ServerSelectionScreen {}
 
-impl ScreenTrait for ConnectionSelectionScreen {
+impl ScreenTrait for ServerSelectionScreen {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
@@ -101,8 +102,8 @@ impl ScreenTrait for ConnectionSelectionScreen {
     }
 }
 
-impl ConnectionSelectionScreen {
+impl ServerSelectionScreen {
     pub fn new() -> Self {
-        ConnectionSelectionScreen {}
+        ServerSelectionScreen {}
     }
 }

@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent, StubEvent};
+use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
@@ -6,6 +6,7 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
+use crate::stub::model::StubEvent;
 
 pub struct StubScreen {}
 

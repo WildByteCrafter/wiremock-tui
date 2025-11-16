@@ -10,11 +10,10 @@ use ratatui::{backend::CrosstermBackend, Frame, Terminal};
 use std::io;
 use thiserror::Error;
 
-mod connection_edit_screen;
-mod connection_selection_screen;
 mod model;
-mod stub_screen;
-mod wire_mock_client;
+mod wire_mock;
+mod server;
+mod stub;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

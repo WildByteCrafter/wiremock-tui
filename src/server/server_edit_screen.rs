@@ -8,14 +8,14 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 use std::io::Error;
 
-pub struct ConnectionEditScreen {}
+pub struct ServerEditScreen {}
 
-impl ConnectionEditScreen {
+impl ServerEditScreen {
     pub fn new() -> Self {
-        ConnectionEditScreen {}
+        ServerEditScreen {}
     }
 }
-impl ScreenTrait for ConnectionEditScreen {
+impl ScreenTrait for ServerEditScreen {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
