@@ -1,5 +1,5 @@
 use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
-use crate::ScreenTrait;
+use crate::model::ScreenTrait;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};

@@ -1,6 +1,6 @@
+use crate::model::ApplicationEvent;
 use std::error::Error;
 use tokio::sync::mpsc::Sender;
-use crate::model::{AppConfig, ApplicationEvent};
 
 pub struct ServerModel {
     pub event_sender: Sender<ApplicationEvent>,
@@ -9,11 +9,11 @@ pub struct ServerModel {
 }
 
 impl ServerModel {
-    pub fn new(app_config: &AppConfig, event_sender: Sender<ApplicationEvent>) -> Self {
+    pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
         Self {
             event_sender,
-            server_list: app_config.server_list.clone(),
-            current_selected_server_index: app_config.selected_server_index,
+            server_list: vec![],
+            current_selected_server_index: None,
         }
     }
 

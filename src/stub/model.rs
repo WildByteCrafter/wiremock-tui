@@ -1,7 +1,8 @@
 use crate::model::ApplicationEvent;
-use crate::{wire_mock, AppError};
+use crate::wire_mock;
 use std::error::Error;
 use std::time::Duration;
+use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 use tokio::time::interval;
 
@@ -58,7 +59,7 @@ impl StubModel {
 
     fn read_all_stubs(&mut self) -> Result<(), Box<dyn Error>> {
         if self.selected_server_url.is_none() {
-            return Err(Box::new(AppError::NoServerSelected));
+            return Err(Box::new(StubError::NoServerSelected));
         }
         let res = wire_mock::client::get_all_stubs(&self.selected_server_url.as_ref().unwrap())?;
         self.stubs = res.mappings;
@@ -144,3 +145,10 @@ pub enum StubEvent {
     ReadAllStubs,
     ToggleAutoRefresh,
 }
+
+#[derive(Error, Debug)]
+pub enum StubError {
+    #[error("No server selected")]
+    NoServerSelected,
+}
+

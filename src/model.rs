@@ -2,56 +2,33 @@ use crate::server::model::{ServerEvent, ServerModel};
 use crate::server::server_edit_screen::ServerEditScreen;
 use crate::server::server_selection_screen::ServerSelectionScreen;
 use crate::stub::stub_screen::StubScreen;
-use crate::{stub, AppError, ScreenTrait};
-use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::io;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use stub::model::StubModel;
 use stub::model::StubEvent;
-
-#[derive(Serialize, Deserialize)]
-pub struct AppConfig {
-    pub server_list: Vec<String>,
-    pub selected_server_index: Option<usize>,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            server_list: vec!["http://localhost:9393".to_string()],
-            selected_server_index: Some(0),
-        }
-    }
-}
+use thiserror::Error;
+use ratatui::Frame;
+use crate::{configuration, stub};
 
 pub struct ApplicationModel {
     pub screen: Box<dyn ScreenTrait>,
     pub server_selection: ServerModel,
     pub stub_model: StubModel,
-    pub config: AppConfig,
     pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
 }
 
 impl ApplicationModel {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        let cfg: AppConfig = confy::load("wm-tui", None)?;
         let event_channel = mpsc::channel::<ApplicationEvent>(100);
         let application_model = ApplicationModel {
             screen: Box::new(ServerSelectionScreen::new()),
-            server_selection: ServerModel::new(&cfg, event_channel.0.clone()),
+            server_selection: ServerModel::new(event_channel.0.clone()),
             stub_model: StubModel::new(event_channel.0.clone()),
-            config: cfg,
             async_channel_receiver: event_channel,
         };
         Ok(application_model)
-    }
-
-    fn save_configuration(&mut self) -> Result<(), AppError> {
-        self.config.selected_server_index = self.server_selection.current_selected_server_index;
-        self.config.server_list = self.server_selection.server_list.clone();
-        confy::store("wm-tui", None, &self.config)
-            .map_err(|e| AppError::StoreConfigurationError(e.to_string()))
     }
 
     fn switch_to_main_screen(self: &mut Self) {
@@ -91,21 +68,14 @@ impl ApplicationModel {
                 self.switch_to_server_edit_screen();
                 Ok(())
             }
-            GlobalEvent::SaveConfiguration => {
-                self.save_configuration()?;
-                Ok(())
-            }
-            GlobalEvent::Quit => Err(Box::new(AppError::UserExit)),
+            GlobalEvent::Quit => Err(Box::new(GlobalError::UserRequestedExit)),
         }
     }
 }
 
-pub enum GlobalEvent {
-    SwitchToStubScreen,
-    SwitchToServerSelectionScreen,
-    SwitchToConnectionEditScreen,
-    SaveConfiguration,
-    Quit,
+
+pub enum Command {
+    None,
 }
 
 pub enum ApplicationEvent {
@@ -113,4 +83,35 @@ pub enum ApplicationEvent {
     Global(GlobalEvent),
     Server(ServerEvent),
     Stub(StubEvent),
+}
+
+
+pub enum GlobalEvent {
+    SwitchToStubScreen,
+    SwitchToServerSelectionScreen,
+    SwitchToConnectionEditScreen,
+    Quit,
+}
+
+pub trait ScreenTrait {
+    fn draw(&self, app: &ApplicationModel, f: &mut Frame);
+    fn event_handling(&self) -> Result<Option<ApplicationEvent>, io::Error>;
+}
+
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("Global error occurred: {0}")]
+    Global(#[from] GlobalError),
+
+    #[error("Stub error occurred: {0}")]
+    Stub(#[from] stub::model::StubError),
+
+    #[error("Configuration error occurred: {0}")]
+    Config(#[from] configuration::model::ConfigurationError),
+}
+
+#[derive(Error, Debug)]
+pub enum GlobalError {
+    #[error("User exit requested")]
+    UserRequestedExit,
 }

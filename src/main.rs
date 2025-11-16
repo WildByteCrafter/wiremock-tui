@@ -3,17 +3,15 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use io::Error;
-use model::ApplicationEvent;
+use model::{AppError, GlobalError, ScreenTrait};
 use model::ApplicationModel;
-use ratatui::{backend::CrosstermBackend, Frame, Terminal};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
-use thiserror::Error;
-
+mod configuration;
 mod model;
-mod wire_mock;
 mod server;
 mod stub;
+mod wire_mock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -54,8 +52,10 @@ async fn run_app<B: ratatui::backend::Backend>(
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Some(msg) = app.screen.event_handling()? {
                 if let Err(e) = app.handle_event(msg) {
-                    if let Some(AppError::UserExit) = e.downcast_ref::<AppError>() {
-                        return Ok(());
+                    if let Some(app_error) = e.downcast_ref::<AppError>() {
+                        if let AppError::Global(GlobalError::UserRequestedExit) = app_error {
+                            return Ok(());
+                        }
                     }
                     return Err(e);
                 }
@@ -64,17 +64,3 @@ async fn run_app<B: ratatui::backend::Backend>(
     }
 }
 
-trait ScreenTrait {
-    fn draw(&self, app: &ApplicationModel, f: &mut Frame);
-    fn event_handling(&self) -> Result<Option<ApplicationEvent>, Error>;
-}
-
-#[derive(Error, Debug)]
-enum AppError {
-    #[error("User exit")]
-    UserExit,
-    #[error("No wire mock server selected")]
-    NoServerSelected,
-    #[error("Failed to store configuration: {0}")]
-    StoreConfigurationError(String),
-}
