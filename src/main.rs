@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, Command, ModelTrait};
+use crate::model::{ApplicationEvent, Command, GlobalEvent, ModelTrait};
 use crossterm::event::EventStream;
 use crossterm::{
     execute,
@@ -46,6 +46,7 @@ async fn run_app<B: ratatui::backend::Backend>(
     app: &mut ApplicationModel,
 ) -> Result<(), Box<dyn Error>> {
     let mut reader = EventStream::new();
+    app.async_channel_receiver.0.send(ApplicationEvent::Global(GlobalEvent::SwitchToServerSelectionScreen)).await?;
     loop {
         tokio::select! {
             application_event_option = app.async_channel_receiver.1.recv() => {
@@ -69,7 +70,10 @@ async fn run_app<B: ratatui::backend::Backend>(
             maybe_event = reader.next() => {
                 match maybe_event{
                     Some(Ok(event))  => {
-                        app.screen.handle_key_event(&event).await?
+                        match &app.screen{
+                            Some(screen) => screen.handle_key_event(&event).await?,
+                            None => {}
+                        }
                     }
                     _ => ()
                 }
@@ -77,7 +81,11 @@ async fn run_app<B: ratatui::backend::Backend>(
 
             // Example of doing other async work or a timeout:
             _ = time::sleep(Duration::from_millis(100)) => {
-                terminal.draw(|f| app.screen.draw(app, f))?;
+                match &app.screen {
+                    Some(screen) =>   {terminal.draw(|f| screen.draw(app, f))?;
+                    },
+                _ => {}
+                }
             }
         }
     }

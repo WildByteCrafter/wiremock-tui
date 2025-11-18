@@ -2,6 +2,7 @@ use crate::configuration::model::{ConfigurationCommand, ConfigurationModel};
 use crate::server::model::{ServerCommand, ServerEvent, ServerModel};
 use crate::server::server_edit_screen::ServerEditScreen;
 use crate::server::server_selection_screen::ServerSelectionScreen;
+use crate::stub::model::StubCommand;
 use crate::stub::stub_screen::StubScreen;
 use crate::{configuration, stub};
 use async_trait::async_trait;
@@ -13,10 +14,9 @@ use stub::model::StubModel;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use crate::stub::model::StubCommand;
 
 pub struct ApplicationModel {
-    pub screen: Box<dyn ScreenTrait+ Send>,
+    pub screen: Option<Box<dyn ScreenTrait + Send>>,
     pub config_model: ConfigurationModel,
     pub server_model: ServerModel,
     pub stub_model: StubModel,
@@ -24,12 +24,13 @@ pub struct ApplicationModel {
 }
 
 #[async_trait]
-impl ModelTrait<GlobalEvent,GlobalCommand> for ApplicationModel {
+impl ModelTrait<GlobalEvent, GlobalCommand> for ApplicationModel {
     async fn apply_event(&mut self, event: GlobalEvent) -> Option<Command> {
         match event {
             GlobalEvent::SwitchToStubScreen => {
                 let selected_server = self.server_model.current_selected_server();
-                self.stub_model.selected_server_url = selected_server.cloned();self.switch_to_main_screen();
+                self.stub_model.selected_server_url = selected_server.cloned();
+                self.switch_to_main_screen();
             }
             GlobalEvent::SwitchToServerSelectionScreen => {
                 self.switch_to_server_selection_screen();
@@ -41,7 +42,6 @@ impl ModelTrait<GlobalEvent,GlobalCommand> for ApplicationModel {
         None
     }
 
-
     async fn handle_command(&mut self, _: GlobalCommand) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
@@ -51,7 +51,7 @@ impl ApplicationModel {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let event_channel = mpsc::channel::<ApplicationEvent>(100);
         let application_model = ApplicationModel {
-            screen: Box::new(ServerSelectionScreen::new(event_channel.0.clone())),
+            screen: None,
             config_model: ConfigurationModel::new(event_channel.0.clone())?,
             server_model: ServerModel::new(event_channel.0.clone()),
             stub_model: StubModel::new(event_channel.0.clone()),
@@ -61,17 +61,21 @@ impl ApplicationModel {
     }
 
     fn switch_to_main_screen(self: &mut Self) {
-        self.screen = Box::new(StubScreen::new(self.async_channel_receiver.0.clone()));
+        self.screen = Some(Box::new(StubScreen::new(
+            self.async_channel_receiver.0.clone(),
+        )));
     }
 
     fn switch_to_server_selection_screen(self: &mut Self) {
-        self.screen = Box::new(ServerSelectionScreen::new(
+        self.screen = Some(Box::new(ServerSelectionScreen::new(
             self.async_channel_receiver.0.clone(),
-        ));
+        )));
     }
 
     fn switch_to_server_edit_screen(self: &mut Self) {
-        self.screen = Box::new(ServerEditScreen::new(self.async_channel_receiver.0.clone()))
+        self.screen = Some(Box::new(ServerEditScreen::new(
+            self.async_channel_receiver.0.clone(),
+        )));
     }
 }
 
@@ -79,7 +83,7 @@ pub enum Command {
     Configuration(ConfigurationCommand),
     Server(ServerCommand),
     Stub(StubCommand),
-    Global(GlobalCommand)
+    Global(GlobalCommand),
 }
 
 pub enum ApplicationEvent {
@@ -98,7 +102,7 @@ pub enum GlobalEvent {
 pub enum GlobalCommand {}
 
 #[async_trait]
-pub trait ModelTrait<E,C> {
+pub trait ModelTrait<E, C> {
     async fn apply_event(&mut self, event: E) -> Option<Command>;
     async fn handle_command(&mut self, command: C) -> Result<(), Box<dyn Error>>;
 }
