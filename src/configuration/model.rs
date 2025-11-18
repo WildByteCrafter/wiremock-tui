@@ -5,7 +5,7 @@ use std::error::Error;
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Debug)]
 pub struct RootConfiguration {
     pub server_list: Vec<String>,
     pub selected_server_index: Option<usize>,
@@ -20,19 +20,24 @@ impl Default for RootConfiguration {
     }
 }
 
-struct ConfigurationModel {
+pub struct ConfigurationModel {
     event_sender: Sender<ApplicationEvent>,
     app_config: RootConfiguration,
 }
 
 impl ModelTrait<ConfigurationEvent> for ConfigurationModel {
-    fn handle_event(&mut self, msg: ConfigurationEvent) -> Result<Option<Command>, Box<dyn Error>> {
-        todo!()
+    async fn handle_event(&mut self, event: ConfigurationEvent) {
+        println!("The origin is: {event:?}")
+    }
+
+    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
+        print!("Command {command:#?}");
+        Ok(())
     }
 }
 
 impl ConfigurationModel {
-    fn new(event_sender: Sender<ApplicationEvent>) -> Result<Self, ConfigurationError> {
+    pub fn new(event_sender: Sender<ApplicationEvent>) -> Result<Self, ConfigurationError> {
         let app_config: RootConfiguration = confy::load("wm-tui", None)
             .map_err(|e| ConfigurationError::StoreConfigurationError(e))?;
         Ok(ConfigurationModel {
@@ -54,6 +59,7 @@ pub enum ConfigurationCmd {
     LoadConfiguration,
 }
 
+#[derive(Debug)]
 pub enum ConfigurationEvent {
     ConfigurationLoaded(RootConfiguration),
 }

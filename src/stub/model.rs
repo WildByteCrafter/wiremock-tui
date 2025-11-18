@@ -16,34 +16,29 @@ pub struct StubModel {
 }
 
 impl ModelTrait<StubEvent> for StubModel {
-    fn handle_event(&mut self, event: StubEvent) -> Result<Option<Command>, Box<dyn Error>> {
+    async fn handle_event(&mut self, event: StubEvent) {
         match event {
             StubEvent::SelectNext => {
                 self.select_next_stub();
-                Ok(None)
             }
             StubEvent::SelectPrevious => {
                 self.select_previous_stub();
-                Ok((None))
             }
             StubEvent::ScrollDetailsUp => {
                 self.scroll_details_up();
-                Ok(None)
             }
             StubEvent::ScrollDetailsDown => {
                 self.scroll_details_down();
-                Ok((None))
             }
-            StubEvent::DeleteSelected => {
-                self.delete_selected_stub()?;
-                Ok(None)
-            }
-            StubEvent::ReadAllStubs => Ok(None),
-            StubEvent::ToggleAutoRefresh => {
-                self.toggle_auto_refresh_stubs();
-                Ok((None))
-            }
+            StubEvent::DeleteSelected => (),
+            StubEvent::ReadAllStubs => (),
+            StubEvent::ToggleAutoRefresh => (),
         }
+    }
+
+    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
+        print!("Command {command:#?}");
+        Ok(())
     }
 }
 

@@ -1,11 +1,13 @@
+use crate::configuration::model::ConfigurationModel;
 use crate::server::model::{ServerEvent, ServerModel};
 use crate::server::server_edit_screen::ServerEditScreen;
 use crate::server::server_selection_screen::ServerSelectionScreen;
 use crate::stub::stub_screen::StubScreen;
 use crate::{configuration, stub};
+use async_trait::async_trait;
+use crossterm::event::Event;
 use ratatui::Frame;
 use std::error::Error;
-use std::io;
 use stub::model::StubEvent;
 use stub::model::StubModel;
 use thiserror::Error;
@@ -14,30 +16,32 @@ use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct ApplicationModel {
     pub screen: Box<dyn ScreenTrait>,
-    pub server_selection: ServerModel,
+    pub config_model: ConfigurationModel,
+    pub server_model: ServerModel,
     pub stub_model: StubModel,
     pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
 }
 
 impl ModelTrait<GlobalEvent> for ApplicationModel {
-    fn handle_event(&mut self, event: GlobalEvent) -> Result<Option<Command>, Box<dyn Error>> {
+    async fn handle_event(&mut self, event: GlobalEvent) {
         match event {
             GlobalEvent::SwitchToStubScreen => {
-                let selected_server = self.server_selection.current_selected_server();
+                let selected_server = self.server_model.current_selected_server();
                 self.stub_model.selected_server_url = selected_server.cloned();
                 self.switch_to_main_screen();
-                Ok(None)
             }
             GlobalEvent::SwitchToServerSelectionScreen => {
                 self.switch_to_server_selection_screen();
-                Ok(None)
             }
             GlobalEvent::SwitchToConnectionEditScreen => {
                 self.switch_to_server_edit_screen();
-                Ok(None)
             }
-            GlobalEvent::Quit => Err(Box::new(GlobalError::UserRequestedExit)),
         }
+    }
+
+    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
+        print!("Command {command:#?}");
+        Ok(())
     }
 }
 
@@ -45,8 +49,9 @@ impl ApplicationModel {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let event_channel = mpsc::channel::<ApplicationEvent>(100);
         let application_model = ApplicationModel {
-            screen: Box::new(ServerSelectionScreen::new()),
-            server_selection: ServerModel::new(event_channel.0.clone()),
+            screen: Box::new(ServerSelectionScreen::new(event_channel.0.clone())),
+            config_model: ConfigurationModel::new(event_channel.0.clone())?,
+            server_model: ServerModel::new(event_channel.0.clone()),
             stub_model: StubModel::new(event_channel.0.clone()),
             async_channel_receiver: event_channel,
         };
@@ -54,23 +59,29 @@ impl ApplicationModel {
     }
 
     fn switch_to_main_screen(self: &mut Self) {
-        self.screen = Box::new(StubScreen::new());
+        self.screen = Box::new(StubScreen::new(self.async_channel_receiver.0.clone()));
     }
 
     fn switch_to_server_selection_screen(self: &mut Self) {
-        self.screen = Box::new(ServerSelectionScreen::new());
+        self.screen = Box::new(ServerSelectionScreen::new(
+            self.async_channel_receiver.0.clone(),
+        ));
     }
 
     fn switch_to_server_edit_screen(self: &mut Self) {
-        self.screen = Box::new(ServerEditScreen::new())
+        self.screen = Box::new(ServerEditScreen::new(self.async_channel_receiver.0.clone()))
     }
 }
 
+pub enum ApplicationCmd {}
+
+#[derive(Debug)]
 pub enum Command {
     None,
 }
 
 pub enum ApplicationEvent {
+    QuitApplication,
     Global(GlobalEvent),
     Server(ServerEvent),
     Stub(StubEvent),
@@ -80,16 +91,17 @@ pub enum GlobalEvent {
     SwitchToStubScreen,
     SwitchToServerSelectionScreen,
     SwitchToConnectionEditScreen,
-    Quit,
 }
 
 pub trait ModelTrait<T> {
-    fn handle_event(&mut self, event: T) -> Result<Option<Command>, Box<dyn Error>>;
+    async fn handle_event(&mut self, event: T);
+    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>>;
 }
 
+#[async_trait]
 pub trait ScreenTrait {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame);
-    fn event_handling(&self) -> Result<Option<ApplicationEvent>, io::Error>;
+    async fn handle_key_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[derive(Error, Debug)]

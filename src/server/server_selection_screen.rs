@@ -1,15 +1,25 @@
 use crate::model::ScreenTrait;
 use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::server::model::ServerEvent;
-use crossterm::event;
+use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
+use tokio::sync::mpsc::Sender;
 
-pub struct ServerSelectionScreen {}
+pub struct ServerSelectionScreen {
+    sender: Sender<ApplicationEvent>,
+}
 
+impl ServerSelectionScreen {
+    pub fn new(sender: Sender<ApplicationEvent>) -> Self {
+        ServerSelectionScreen { sender }
+    }
+}
+
+#[async_trait]
 impl ScreenTrait for ServerSelectionScreen {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
@@ -33,14 +43,14 @@ impl ScreenTrait for ServerSelectionScreen {
 
         // Server list display
         let items: Vec<ListItem> = app
-            .server_selection
+            .server_model
             .server_list
             .iter()
             .enumerate()
             .map(|(i, server)| {
                 let style = if i
                     == app
-                        .server_selection
+                        .server_model
                         .current_selected_server_index
                         .unwrap_or(999)
                 {
@@ -79,31 +89,44 @@ impl ScreenTrait for ServerSelectionScreen {
         }
     }
 
-    fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
-        if let Event::Key(key) = event::read()? {
-            return match key.code {
-                KeyCode::Char('q') => Ok(Some(ApplicationEvent::Global(GlobalEvent::Quit))),
-                KeyCode::Up | KeyCode::Char('k') => Ok(Some(ApplicationEvent::Server(
-                    ServerEvent::ChangeSelectionUp,
-                ))),
-                KeyCode::Down | KeyCode::Char('j') => Ok(Some(ApplicationEvent::Server(
-                    ServerEvent::ChangeSelectionDown,
-                ))),
-                KeyCode::Char('e') => Ok(Some(ApplicationEvent::Global(
-                    GlobalEvent::SwitchToConnectionEditScreen,
-                ))),
-                KeyCode::Enter => Ok(Some(ApplicationEvent::Global(
-                    GlobalEvent::SwitchToStubScreen,
-                ))),
-                _ => Ok(None),
-            };
+    async fn handle_key_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>> {
+        match event {
+            Event::Key(key) => match key.code {
+                KeyCode::Char('q') => {
+                    self.sender
+                        .send(ApplicationEvent::QuitApplication)
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.sender
+                        .send(ApplicationEvent::Server(ServerEvent::ChangeSelectionUp))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.sender
+                        .send(ApplicationEvent::Server(ServerEvent::ChangeSelectionDown))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Char('e') => {
+                    self.sender
+                        .send(ApplicationEvent::Global(
+                            GlobalEvent::SwitchToConnectionEditScreen,
+                        ))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Enter => {
+                    self.sender
+                        .send(ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen))
+                        .await?;
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
+            _ => Ok(()),
         }
-        Ok(None)
-    }
-}
-
-impl ServerSelectionScreen {
-    pub fn new() -> Self {
-        ServerSelectionScreen {}
     }
 }

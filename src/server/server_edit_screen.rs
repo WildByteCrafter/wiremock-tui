@@ -1,20 +1,24 @@
-use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
+use async_trait::async_trait;
 use crate::model::ScreenTrait;
-use crossterm::event;
+use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
-use std::io::Error;
+use tokio::sync::mpsc::Sender;
 
-pub struct ServerEditScreen {}
+pub struct ServerEditScreen {
+    sender: Sender<ApplicationEvent>,
+}
 
 impl ServerEditScreen {
-    pub fn new() -> Self {
-        ServerEditScreen {}
+    pub fn new(sender: Sender<ApplicationEvent>) -> Self {
+        ServerEditScreen { sender }
     }
 }
+
+#[async_trait]
 impl ScreenTrait for ServerEditScreen {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
@@ -54,14 +58,24 @@ impl ScreenTrait for ServerEditScreen {
         }
     }
 
-    fn event_handling(&self) -> Result<Option<ApplicationEvent>, Error> {
-        if let Event::Key(key) = event::read()? {
-            return match key.code {
-                KeyCode::Char('q') => Ok(Some(ApplicationEvent::Global(GlobalEvent::Quit))),
-                KeyCode::Enter => Ok(Some(ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen))),
-                _ => Ok(None)
-            }
+    async fn handle_key_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>> {
+        match event {
+           Event::Key(key) => match key.code {
+                KeyCode::Char('q') => {
+                    self.sender
+                        .send(ApplicationEvent::QuitApplication)
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Enter | KeyCode::Char('k') => {
+                    self.sender
+                        .send(ApplicationEvent::Global(GlobalEvent::SwitchToServerSelectionScreen))
+                        .await?;
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
+            _ => Ok(())
         }
-        Ok(None)
     }
 }

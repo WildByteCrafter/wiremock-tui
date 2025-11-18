@@ -1,14 +1,16 @@
-use crate::model::{ApplicationEvent, Command, ModelTrait};
+use crate::model::{ApplicationEvent, ModelTrait};
+use crossterm::event::EventStream;
 use crossterm::{
-    event::{self},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use futures::StreamExt;
 use model::ApplicationModel;
-use model::{AppError, GlobalError, ScreenTrait};
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::error::Error;
 use std::io;
+use std::time::Duration;
+use tokio::time;
 
 mod configuration;
 mod model;
@@ -43,37 +45,32 @@ async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut ApplicationModel,
 ) -> Result<(), Box<dyn Error>> {
+    let mut reader = EventStream::new();
     loop {
-        if let Ok(msg) = app.async_channel_receiver.1.try_recv() {
-            handle_event(app, msg)?;
-        }
-
-        // Draw current screen
-        terminal.draw(|f| app.screen.draw(app, f))?;
-
-        // Handle input
-        if event::poll(std::time::Duration::from_millis(100))? {
-            if let Some(msg) = app.screen.event_handling()? {
-                if let Err(e) = handle_event(app, msg) {
-                    if let Some(app_error) = e.downcast_ref::<AppError>() {
-                        if let AppError::Global(GlobalError::UserRequestedExit) = app_error {
-                            return Ok(());
-                        }
+        tokio::select! {
+            blub = app.async_channel_receiver.1.recv() => {
+                if let Some(msg) = blub {
+                    match msg {
+                        ApplicationEvent::Global(ev) => app.handle_event(ev).await,
+                        ApplicationEvent::Server(ev) => app.server_model.handle_event(ev).await,
+                        ApplicationEvent::Stub(ev) => app.stub_model.handle_event(ev).await,
+                        ApplicationEvent::QuitApplication => return Ok(()),
                     }
-                    return Err(e);
                 }
             }
-        }
-    }
-}
+            maybe_event = reader.next() => {
+                match maybe_event{
+                    Some(Ok(event))  => {
+                        app.screen.handle_key_event(&event).await?
+                    }
+                    _ => ()
+                }
+            }
 
-pub fn handle_event(
-    application_model: &mut ApplicationModel,
-    msg: ApplicationEvent,
-) -> Result<Option<Command>, Box<dyn Error>> {
-    match msg {
-        ApplicationEvent::Global(ev) => application_model.handle_event(ev),
-        ApplicationEvent::Server(ev) => application_model.server_selection.handle_event(ev),
-        ApplicationEvent::Stub(ev) => application_model.stub_model.handle_event(ev),
+            // Example of doing other async work or a timeout:
+            _ = time::sleep(Duration::from_millis(100)) => {
+                terminal.draw(|f| app.screen.draw(app, f))?;
+            }
+        }
     }
 }

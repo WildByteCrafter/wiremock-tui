@@ -9,29 +9,29 @@ pub struct ServerModel {
 }
 
 impl ModelTrait<ServerEvent> for ServerModel {
-    fn handle_event(&mut self, event: ServerEvent) -> Result<Option<Command>, Box<dyn Error>> {
+    async fn handle_event(&mut self, event: ServerEvent) {
         match event {
             ServerEvent::ChangeSelectionUp => {
                 self.change_server_selection_up();
-                Ok(None)
             }
             ServerEvent::ChangeSelectionDown => {
                 self.change_server_selection_down();
-                Ok(None)
             }
             ServerEvent::StartNewServerRegistration => {
                 self.start_new_server_registration();
-                Ok(None)
             }
             ServerEvent::AddNewServer { server_url } => {
                 self.add_new_server(server_url);
-                Ok(None)
             }
             ServerEvent::DeleteSelectedServer => {
                 self.delete_selected_server();
-                Ok((None))
             }
         }
+    }
+
+    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
+        print!("Command {command:#?}");
+        Ok(())
     }
 }
 
@@ -69,7 +69,9 @@ impl ServerModel {
         self.current_selected_server_index = Some(next_index);
     }
 
-    fn add_new_server(&self, p0: String) {}
+    fn add_new_server(&self, server_url: String) {
+        println!("Adding new server: {server_url}");
+    }
     fn start_new_server_registration(&self) {}
 
     fn delete_selected_server(&self) {

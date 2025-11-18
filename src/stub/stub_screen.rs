@@ -1,18 +1,22 @@
-use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::model::ScreenTrait;
-use crossterm::event;
+use crate::model::{ApplicationEvent, ApplicationModel};
+use crate::stub::model::StubEvent;
+use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
-use crate::stub::model::StubEvent;
+use sync::mpsc::Sender;
+use tokio::sync;
 
-pub struct StubScreen {}
+pub struct StubScreen {
+    sender: Sender<ApplicationEvent>,
+}
 
 impl StubScreen {
-    pub fn new() -> Self {
-        StubScreen {}
+    pub fn new(sender: Sender<ApplicationEvent>) -> Self {
+        StubScreen { sender }
     }
 
     fn get_stub_details(&self, app: &ApplicationModel) -> String {
@@ -30,6 +34,7 @@ impl StubScreen {
     }
 }
 
+#[async_trait]
 impl ScreenTrait for StubScreen {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
@@ -133,22 +138,58 @@ impl ScreenTrait for StubScreen {
         }
     }
 
-    fn event_handling(&self) -> Result<Option<ApplicationEvent>, std::io::Error> {
-        if let Event::Key(key) = event::read()? {
-            return Ok(Some(match key.code {
-                KeyCode::Char('a') => ApplicationEvent::Stub(StubEvent::ToggleAutoRefresh),
-                KeyCode::Char('r') => ApplicationEvent::Stub(StubEvent::ReadAllStubs),
-                KeyCode::Char('q') => ApplicationEvent::Global(GlobalEvent::Quit),
-                KeyCode::Char('d') => ApplicationEvent::Stub(StubEvent::DeleteSelected),
-                KeyCode::Up | KeyCode::Char('k') => {
-                    ApplicationEvent::Stub(StubEvent::SelectPrevious)
+    async fn handle_key_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>> {
+        return match event {
+            Event::Key(key) => match key.code {
+                KeyCode::Char('a') => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::ToggleAutoRefresh))
+                        .await?;
+                    Ok(())
                 }
-                KeyCode::Down | KeyCode::Char('j') => ApplicationEvent::Stub(StubEvent::SelectNext),
-                KeyCode::PageUp => ApplicationEvent::Stub(StubEvent::ScrollDetailsUp),
-                KeyCode::PageDown => ApplicationEvent::Stub(StubEvent::ScrollDetailsDown),
-                _ => return Ok(None),
-            }));
-        }
-        Ok(None)
+                KeyCode::Char('r') => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::ReadAllStubs))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Char('q') => {
+                    self.sender.send(ApplicationEvent::QuitApplication).await?;
+                    Ok(())
+                }
+                KeyCode::Char('d') => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::DeleteSelected))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::SelectPrevious))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::SelectNext))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::PageUp => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::ScrollDetailsUp))
+                        .await?;
+                    Ok(())
+                }
+                KeyCode::PageDown => {
+                    self.sender
+                        .send(ApplicationEvent::Stub(StubEvent::ScrollDetailsDown))
+                        .await?;
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
+            _ => Ok(()),
+        };
     }
 }
