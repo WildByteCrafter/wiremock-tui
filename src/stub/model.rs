@@ -1,5 +1,6 @@
 use crate::model::{ApplicationEvent, Command, ModelTrait};
 use crate::wire_mock;
+use async_trait::async_trait;
 use std::error::Error;
 use std::time::Duration;
 use thiserror::Error;
@@ -15,8 +16,9 @@ pub struct StubModel {
     pub refresh_task: Option<tokio::task::JoinHandle<()>>,
 }
 
-impl ModelTrait<StubEvent> for StubModel {
-    async fn handle_event(&mut self, event: StubEvent) {
+#[async_trait]
+impl ModelTrait<StubEvent, StubCommand> for StubModel {
+    async fn apply_event(&mut self, event: StubEvent) -> Option<Command> {
         match event {
             StubEvent::SelectNext => {
                 self.select_next_stub();
@@ -34,10 +36,10 @@ impl ModelTrait<StubEvent> for StubModel {
             StubEvent::ReadAllStubs => (),
             StubEvent::ToggleAutoRefresh => (),
         }
+        None
     }
 
-    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
-        print!("Command {command:#?}");
+    async fn handle_command(&mut self, _: StubCommand) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
@@ -132,6 +134,8 @@ impl StubModel {
         Ok(())
     }
 }
+
+pub enum StubCommand {}
 
 pub enum StubEvent {
     SelectNext,

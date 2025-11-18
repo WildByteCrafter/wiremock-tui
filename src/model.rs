@@ -1,5 +1,5 @@
-use crate::configuration::model::ConfigurationModel;
-use crate::server::model::{ServerEvent, ServerModel};
+use crate::configuration::model::{ConfigurationCommand, ConfigurationModel};
+use crate::server::model::{ServerCommand, ServerEvent, ServerModel};
 use crate::server::server_edit_screen::ServerEditScreen;
 use crate::server::server_selection_screen::ServerSelectionScreen;
 use crate::stub::stub_screen::StubScreen;
@@ -13,22 +13,23 @@ use stub::model::StubModel;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use crate::stub::model::StubCommand;
 
 pub struct ApplicationModel {
-    pub screen: Box<dyn ScreenTrait>,
+    pub screen: Box<dyn ScreenTrait+ Send>,
     pub config_model: ConfigurationModel,
     pub server_model: ServerModel,
     pub stub_model: StubModel,
     pub async_channel_receiver: (Sender<ApplicationEvent>, Receiver<ApplicationEvent>),
 }
 
-impl ModelTrait<GlobalEvent> for ApplicationModel {
-    async fn handle_event(&mut self, event: GlobalEvent) {
+#[async_trait]
+impl ModelTrait<GlobalEvent,GlobalCommand> for ApplicationModel {
+    async fn apply_event(&mut self, event: GlobalEvent) -> Option<Command> {
         match event {
             GlobalEvent::SwitchToStubScreen => {
                 let selected_server = self.server_model.current_selected_server();
-                self.stub_model.selected_server_url = selected_server.cloned();
-                self.switch_to_main_screen();
+                self.stub_model.selected_server_url = selected_server.cloned();self.switch_to_main_screen();
             }
             GlobalEvent::SwitchToServerSelectionScreen => {
                 self.switch_to_server_selection_screen();
@@ -37,10 +38,11 @@ impl ModelTrait<GlobalEvent> for ApplicationModel {
                 self.switch_to_server_edit_screen();
             }
         }
+        None
     }
 
-    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
-        print!("Command {command:#?}");
+
+    async fn handle_command(&mut self, _: GlobalCommand) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
@@ -73,11 +75,11 @@ impl ApplicationModel {
     }
 }
 
-pub enum ApplicationCmd {}
-
-#[derive(Debug)]
 pub enum Command {
-    None,
+    Configuration(ConfigurationCommand),
+    Server(ServerCommand),
+    Stub(StubCommand),
+    Global(GlobalCommand)
 }
 
 pub enum ApplicationEvent {
@@ -93,15 +95,18 @@ pub enum GlobalEvent {
     SwitchToConnectionEditScreen,
 }
 
-pub trait ModelTrait<T> {
-    async fn handle_event(&mut self, event: T);
-    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>>;
+pub enum GlobalCommand {}
+
+#[async_trait]
+pub trait ModelTrait<E,C> {
+    async fn apply_event(&mut self, event: E) -> Option<Command>;
+    async fn handle_command(&mut self, command: C) -> Result<(), Box<dyn Error>>;
 }
 
 #[async_trait]
 pub trait ScreenTrait {
     fn draw(&self, app: &ApplicationModel, f: &mut Frame);
-    async fn handle_key_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>>;
+    async fn handle_key_event(&self, key_event: &Event) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[derive(Error, Debug)]

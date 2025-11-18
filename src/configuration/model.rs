@@ -2,10 +2,11 @@ use crate::model::AppError;
 use crate::model::{ApplicationEvent, Command, ModelTrait};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use async_trait::async_trait;
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 
-#[derive(Serialize, Deserialize,Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RootConfiguration {
     pub server_list: Vec<String>,
     pub selected_server_index: Option<usize>,
@@ -25,13 +26,13 @@ pub struct ConfigurationModel {
     app_config: RootConfiguration,
 }
 
-impl ModelTrait<ConfigurationEvent> for ConfigurationModel {
-    async fn handle_event(&mut self, event: ConfigurationEvent) {
-        println!("The origin is: {event:?}")
+#[async_trait]
+impl ModelTrait<ConfigurationEvent, ConfigurationCommand> for ConfigurationModel {
+    async fn apply_event(&mut self, _: ConfigurationEvent) -> Option<Command> {
+        None
     }
 
-    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
-        print!("Command {command:#?}");
+    async fn handle_command(&mut self, _: ConfigurationCommand) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
@@ -55,7 +56,7 @@ impl ConfigurationModel {
     }
 }
 
-pub enum ConfigurationCmd {
+pub enum ConfigurationCommand {
     LoadConfiguration,
 }
 

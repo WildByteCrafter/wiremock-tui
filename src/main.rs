@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, ModelTrait};
+use crate::model::{ApplicationEvent, Command, ModelTrait};
 use crossterm::event::EventStream;
 use crossterm::{
     execute,
@@ -48,16 +48,24 @@ async fn run_app<B: ratatui::backend::Backend>(
     let mut reader = EventStream::new();
     loop {
         tokio::select! {
-            blub = app.async_channel_receiver.1.recv() => {
-                if let Some(msg) = blub {
-                    match msg {
-                        ApplicationEvent::Global(ev) => app.handle_event(ev).await,
-                        ApplicationEvent::Server(ev) => app.server_model.handle_event(ev).await,
-                        ApplicationEvent::Stub(ev) => app.stub_model.handle_event(ev).await,
+            application_event_option = app.async_channel_receiver.1.recv() => {
+                 if let Some(msg) = application_event_option {
+                    let command_option = match msg {
+                        ApplicationEvent::Global(ev) => app.apply_event(ev).await,
+                        ApplicationEvent::Server(ev) => app.server_model.apply_event(ev).await,
+                        ApplicationEvent::Stub(ev) => app.stub_model.apply_event(ev).await,
                         ApplicationEvent::QuitApplication => return Ok(()),
+                    };
+                    if let Some(command) = command_option {
+                        match command{
+                            Command::Global(ev) => app.handle_command(ev).await?,
+                            Command::Configuration(ev) => app.config_model.handle_command(ev).await?,
+                            Command::Server(ev) => app.server_model.handle_command(ev).await?,
+                            Command::Stub(ev) => app.stub_model.handle_command(ev).await?,}
                     }
                 }
             }
+
             maybe_event = reader.next() => {
                 match maybe_event{
                     Some(Ok(event))  => {

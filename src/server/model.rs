@@ -1,5 +1,6 @@
 use crate::model::{ApplicationEvent, Command, ModelTrait};
 use std::error::Error;
+use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
 
 pub struct ServerModel {
@@ -8,8 +9,9 @@ pub struct ServerModel {
     pub current_selected_server_index: Option<usize>,
 }
 
-impl ModelTrait<ServerEvent> for ServerModel {
-    async fn handle_event(&mut self, event: ServerEvent) {
+#[async_trait]
+impl ModelTrait<ServerEvent,ServerCommand> for ServerModel {
+    async fn apply_event(&mut self, event: ServerEvent) -> Option<Command> {
         match event {
             ServerEvent::ChangeSelectionUp => {
                 self.change_server_selection_up();
@@ -27,10 +29,10 @@ impl ModelTrait<ServerEvent> for ServerModel {
                 self.delete_selected_server();
             }
         }
+        None
     }
 
-    fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
-        print!("Command {command:#?}");
+    async fn handle_command(&mut self, command: ServerCommand) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
@@ -79,6 +81,10 @@ impl ServerModel {
             return;
         }
     }
+}
+
+pub enum ServerCommand {
+
 }
 
 pub enum ServerEvent {
