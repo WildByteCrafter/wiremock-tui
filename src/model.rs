@@ -1,4 +1,4 @@
-use crate::configuration::model::{ConfigurationCommand, ConfigurationModel};
+use crate::configuration::model::{ConfigurationCommand, ConfigurationEvent, ConfigurationModel};
 use crate::server::model::{ServerCommand, ServerEvent, ServerModel};
 use crate::server::server_edit_screen::ServerEditScreen;
 use crate::server::server_selection_screen::ServerSelectionScreen;
@@ -52,7 +52,7 @@ impl ApplicationModel {
         let event_channel = mpsc::channel::<ApplicationEvent>(100);
         let application_model = ApplicationModel {
             screen: None,
-            config_model: ConfigurationModel::new(event_channel.0.clone())?,
+            config_model: ConfigurationModel::new(event_channel.0.clone()),
             server_model: ServerModel::new(event_channel.0.clone()),
             stub_model: StubModel::new(event_channel.0.clone()),
             async_channel_receiver: event_channel,
@@ -88,6 +88,7 @@ pub enum Command {
 
 pub enum ApplicationEvent {
     QuitApplication,
+    Config(ConfigurationEvent),
     Global(GlobalEvent),
     Server(ServerEvent),
     Stub(StubEvent),

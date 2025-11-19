@@ -1,8 +1,9 @@
-use crate::model::AppError;
 use crate::model::{ApplicationEvent, Command, ModelTrait};
+use crate::server::model::ServerEvent;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use async_trait::async_trait;
+use std::ops::DerefMut;
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 
@@ -23,45 +24,67 @@ impl Default for RootConfiguration {
 
 pub struct ConfigurationModel {
     event_sender: Sender<ApplicationEvent>,
-    app_config: RootConfiguration,
+    app_config: Option<RootConfiguration>,
+}
+
+impl ConfigurationModel {
+    pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
+        ConfigurationModel {
+            event_sender,
+            app_config: None,
+        }
+    }
 }
 
 #[async_trait]
 impl ModelTrait<ConfigurationEvent, ConfigurationCommand> for ConfigurationModel {
-    async fn apply_event(&mut self, _: ConfigurationEvent) -> Option<Command> {
-        None
+    async fn apply_event(&mut self, event: ConfigurationEvent) -> Option<Command> {
+        match event {
+            ConfigurationEvent::LoadConfigurationRequested => Some(Command::Configuration(
+                ConfigurationCommand::LoadConfiguration,
+            )),
+            ConfigurationEvent::ConfigurationLoaded(ev) => {
+                self.app_config = Some(ev);
+                let vec = self.app_config.as_ref()?.server_list.clone();
+                self.event_sender.send(ApplicationEvent::Server(ServerEvent::ServerListUpdated(vec))).await;
+                None
+            }
+        }
     }
 
-    async fn handle_command(&mut self, _: ConfigurationCommand) -> Result<(), Box<dyn Error>> {
-        Ok(())
-    }
-}
-
-impl ConfigurationModel {
-    pub fn new(event_sender: Sender<ApplicationEvent>) -> Result<Self, ConfigurationError> {
-        let app_config: RootConfiguration = confy::load("wm-tui", None)
-            .map_err(|e| ConfigurationError::StoreConfigurationError(e))?;
-        Ok(ConfigurationModel {
-            event_sender,
-            app_config,
-        })
-    }
-
-    fn save_configuration(&mut self) -> Result<(), AppError> {
-        // self.app_config.selected_server_index = self.server_selection.current_selected_server_index;
-        // self.app_config.server_list = self.server_selection.server_list.clone();
-        // confy::store("wm-tui", None, &self.config)
-        //     .map_err(|e| AppError::StoreConfigurationError(e.to_string()))
+    async fn handle_command(
+        &mut self,
+        command: ConfigurationCommand,
+    ) -> Result<(), Box<dyn Error>> {
+        match command {
+            ConfigurationCommand::LoadConfiguration => {
+                let app_config: RootConfiguration = confy::load("wm-tui", None)
+                    .map_err(|e| ConfigurationError::StoreConfigurationError(e))?;
+                self.event_sender
+                    .send(ApplicationEvent::Config(
+                        ConfigurationEvent::ConfigurationLoaded(app_config),
+                    ))
+                    .await?;
+            }
+            ConfigurationCommand::SaveConfiguration => {
+                // self.app_config.selected_server_index = self.server_selection.current_selected_server_index;
+                // self.app_config.server_list = self.server_selection.server_list.clone();
+                // confy::store("wm-tui", None, &self.config)
+                //     .map_err(|e| AppError::StoreConfigurationError(e.to_string()))
+            }
+        }
         Ok(())
     }
 }
 
 pub enum ConfigurationCommand {
     LoadConfiguration,
+    SaveConfiguration,
 }
 
 #[derive(Debug)]
 pub enum ConfigurationEvent {
+    LoadConfigurationRequested,
     ConfigurationLoaded(RootConfiguration),
 }
 

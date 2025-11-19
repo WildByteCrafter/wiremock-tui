@@ -1,4 +1,5 @@
 use crate::model::{ApplicationEvent, Command, ModelTrait};
+use crate::stub::model::StubCommand::ReadAllStubs;
 use crate::wire_mock;
 use async_trait::async_trait;
 use std::error::Error;
@@ -22,25 +23,30 @@ impl ModelTrait<StubEvent, StubCommand> for StubModel {
         match event {
             StubEvent::SelectNext => {
                 self.select_next_stub();
+                None
             }
             StubEvent::SelectPrevious => {
                 self.select_previous_stub();
+                None
             }
             StubEvent::ScrollDetailsUp => {
                 self.scroll_details_up();
+                None
             }
             StubEvent::ScrollDetailsDown => {
                 self.scroll_details_down();
+                None
             }
-            StubEvent::DeleteSelected => (),
-            StubEvent::ReadAllStubs => (),
-            StubEvent::ToggleAutoRefresh => (),
+            StubEvent::DeleteSelectedRequested => Some(Command::Stub(ReadAllStubs)),
+            StubEvent::ReadAllStubsRequested => None,
+            StubEvent::ToggleAutoRefresh => None,
         }
-        None
     }
 
-    async fn handle_command(&mut self, _: StubCommand) -> Result<(), Box<dyn Error>> {
-        Ok(())
+    async fn handle_command(&mut self, command: StubCommand) -> Result<(), Box<dyn Error>> {
+        match command {
+            ReadAllStubs => self.read_all_stubs(),
+        }
     }
 }
 
@@ -98,7 +104,7 @@ impl StubModel {
             loop {
                 interval.tick().await;
                 if sender
-                    .send(ApplicationEvent::Stub(StubEvent::ReadAllStubs))
+                    .send(ApplicationEvent::Stub(StubEvent::ReadAllStubsRequested))
                     .await
                     .is_err()
                 {
@@ -135,15 +141,17 @@ impl StubModel {
     }
 }
 
-pub enum StubCommand {}
+pub enum StubCommand {
+    ReadAllStubs,
+}
 
 pub enum StubEvent {
     SelectNext,
     SelectPrevious,
     ScrollDetailsUp,
     ScrollDetailsDown,
-    DeleteSelected,
-    ReadAllStubs,
+    DeleteSelectedRequested,
+    ReadAllStubsRequested,
     ToggleAutoRefresh,
 }
 

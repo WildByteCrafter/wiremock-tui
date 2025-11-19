@@ -149,7 +149,7 @@ impl ScreenTrait for StubScreen {
                 }
                 KeyCode::Char('r') => {
                     self.sender
-                        .send(ApplicationEvent::Stub(StubEvent::ReadAllStubs))
+                        .send(ApplicationEvent::Stub(StubEvent::ReadAllStubsRequested))
                         .await?;
                     Ok(())
                 }
@@ -159,7 +159,7 @@ impl ScreenTrait for StubScreen {
                 }
                 KeyCode::Char('d') => {
                     self.sender
-                        .send(ApplicationEvent::Stub(StubEvent::DeleteSelected))
+                        .send(ApplicationEvent::Stub(StubEvent::DeleteSelectedRequested))
                         .await?;
                     Ok(())
                 }

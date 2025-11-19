@@ -1,3 +1,4 @@
+use crate::configuration::model::ConfigurationEvent;
 use crate::model::{ApplicationEvent, Command, GlobalEvent, ModelTrait};
 use crossterm::event::EventStream;
 use crossterm::{
@@ -46,7 +47,7 @@ async fn run_app<B: ratatui::backend::Backend>(
     app: &mut ApplicationModel,
 ) -> Result<(), Box<dyn Error>> {
     let mut reader = EventStream::new();
-    app.async_channel_receiver.0.send(ApplicationEvent::Global(GlobalEvent::SwitchToServerSelectionScreen)).await?;
+    send_initial_events(app).await?;
     loop {
         tokio::select! {
             application_event_option = app.async_channel_receiver.1.recv() => {
@@ -55,6 +56,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                         ApplicationEvent::Global(ev) => app.apply_event(ev).await,
                         ApplicationEvent::Server(ev) => app.server_model.apply_event(ev).await,
                         ApplicationEvent::Stub(ev) => app.stub_model.apply_event(ev).await,
+                        ApplicationEvent::Config(ev) => app.config_model.apply_event(ev).await,
                         ApplicationEvent::QuitApplication => return Ok(()),
                     };
                     if let Some(command) = command_option {
@@ -89,4 +91,20 @@ async fn run_app<B: ratatui::backend::Backend>(
             }
         }
     }
+}
+
+async fn send_initial_events(app: &mut ApplicationModel) -> Result<(), Box<dyn Error>> {
+    app.async_channel_receiver
+        .0
+        .send(ApplicationEvent::Global(
+            GlobalEvent::SwitchToServerSelectionScreen,
+        ))
+        .await?;
+    app.async_channel_receiver
+        .0
+        .send(ApplicationEvent::Config(
+            ConfigurationEvent::LoadConfigurationRequested,
+        ))
+        .await?;
+    Ok(())
 }
