@@ -42,6 +42,14 @@ impl ModelTrait<GlobalEvent, GlobalCommand> for ApplicationModel {
                 self.switch_to_server_edit_screen();
                 Ok(())
             }
+            GlobalEvent::ConfigurationLoaded => {
+                if let Some(rootConfig) = self.config_model.app_config.as_ref() {
+                    self.server_model.current_selected_server_index =
+                        rootConfig.selected_server_index;
+                    self.server_model.server_list = rootConfig.server_list.clone();
+                }
+                Ok(())
+            }
         }
     }
 
@@ -101,6 +109,7 @@ pub enum ApplicationEvent {
 }
 
 pub enum GlobalEvent {
+    ConfigurationLoaded,
     SwitchToStubScreen,
     SwitchToServerSelectionScreen,
     SwitchToConnectionEditScreen,

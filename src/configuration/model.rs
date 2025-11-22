@@ -1,8 +1,8 @@
-use std::error::Error;
 use crate::model::{ApplicationEvent, Command, ModelTrait};
 use crate::server::model::ServerEvent;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
@@ -25,7 +25,7 @@ impl Default for RootConfiguration {
 pub struct ConfigurationModel {
     event_sender: Sender<ApplicationEvent>,
     command_sender: Sender<Command>,
-    app_config: Option<RootConfiguration>,
+    pub app_config: Option<RootConfiguration>,
 }
 
 impl ConfigurationModel {
