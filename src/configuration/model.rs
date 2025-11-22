@@ -1,9 +1,9 @@
+use std::error::Error;
 use crate::model::{ApplicationEvent, Command, ModelTrait};
 use crate::server::model::ServerEvent;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
-use std::ops::DerefMut;
+
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 
@@ -24,13 +24,15 @@ impl Default for RootConfiguration {
 
 pub struct ConfigurationModel {
     event_sender: Sender<ApplicationEvent>,
+    command_sender: Sender<Command>,
     app_config: Option<RootConfiguration>,
 }
 
 impl ConfigurationModel {
-    pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
+    pub fn new(event_sender: Sender<ApplicationEvent>, command_sender: Sender<Command>) -> Self {
         ConfigurationModel {
             event_sender,
+            command_sender,
             app_config: None,
         }
     }
@@ -38,16 +40,30 @@ impl ConfigurationModel {
 
 #[async_trait]
 impl ModelTrait<ConfigurationEvent, ConfigurationCommand> for ConfigurationModel {
-    async fn apply_event(&mut self, event: ConfigurationEvent) -> Option<Command> {
+    async fn apply_event(&mut self, event: ConfigurationEvent) -> Result<(), Box<dyn Error>> {
         match event {
-            ConfigurationEvent::LoadConfigurationRequested => Some(Command::Configuration(
-                ConfigurationCommand::LoadConfiguration,
-            )),
+            ConfigurationEvent::LoadConfigurationRequested => {
+                self.command_sender
+                    .send(Command::Configuration(
+                        ConfigurationCommand::LoadConfiguration,
+                    ))
+                    .await?;
+                Ok(())
+            }
             ConfigurationEvent::ConfigurationLoaded(ev) => {
                 self.app_config = Some(ev);
-                let vec = self.app_config.as_ref()?.server_list.clone();
-                self.event_sender.send(ApplicationEvent::Server(ServerEvent::ServerListUpdated(vec))).await;
-                None
+                let vec = self
+                    .app_config
+                    .as_ref()
+                    .ok_or("Configuration is missing")?
+                    .server_list
+                    .clone();
+                self.event_sender
+                    .send(ApplicationEvent::Server(ServerEvent::ServerListUpdated(
+                        vec,
+                    )))
+                    .await?;
+                Ok(())
             }
         }
     }
@@ -61,7 +77,7 @@ impl ModelTrait<ConfigurationEvent, ConfigurationCommand> for ConfigurationModel
                 let app_config: RootConfiguration = confy::load("wm-tui", None)
                     .map_err(|e| ConfigurationError::StoreConfigurationError(e))?;
                 self.event_sender
-                    .send(ApplicationEvent::Config(
+                    .send(ApplicationEvent::Configuration(
                         ConfigurationEvent::ConfigurationLoaded(app_config),
                     ))
                     .await?;

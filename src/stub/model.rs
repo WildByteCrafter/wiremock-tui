@@ -11,6 +11,7 @@ use tokio::time::interval;
 pub struct StubModel {
     pub selected_server_url: Option<String>,
     pub event_sender: Sender<ApplicationEvent>,
+    pub command_sender: Sender<Command>,
     pub stubs: Vec<wire_mock::client::StubMapping>,
     pub selected_stub_index: usize,
     pub scroll_offset: usize,
@@ -19,42 +20,54 @@ pub struct StubModel {
 
 #[async_trait]
 impl ModelTrait<StubEvent, StubCommand> for StubModel {
-    async fn apply_event(&mut self, event: StubEvent) -> Option<Command> {
+    async fn apply_event(&mut self, event: StubEvent) -> Result<(), Box<dyn Error>> {
         match event {
             StubEvent::SelectNext => {
                 self.select_next_stub();
-                None
+                Ok(())
             }
             StubEvent::SelectPrevious => {
                 self.select_previous_stub();
-                None
+                Ok(())
             }
             StubEvent::ScrollDetailsUp => {
                 self.scroll_details_up();
-                None
+                Ok(())
             }
             StubEvent::ScrollDetailsDown => {
                 self.scroll_details_down();
-                None
+                Ok(())
             }
-            StubEvent::DeleteSelectedRequested => Some(Command::Stub(ReadAllStubs)),
-            StubEvent::ReadAllStubsRequested => None,
-            StubEvent::ToggleAutoRefresh => None,
+            StubEvent::DeleteSelectedRequested => {
+                self.command_sender
+                    .send(Command::Stub(StubCommand::DeleteSelectedStub))
+                    .await?;
+                Ok(())
+            }
+            StubEvent::ReadAllStubsRequested => {
+                self.command_sender
+                    .send(Command::Stub(ReadAllStubs))
+                    .await?;
+                Ok(())
+            }
+            StubEvent::ToggleAutoRefresh => Ok(()),
         }
     }
 
     async fn handle_command(&mut self, command: StubCommand) -> Result<(), Box<dyn Error>> {
         match command {
             ReadAllStubs => self.read_all_stubs(),
+            StubCommand::DeleteSelectedStub => self.delete_selected_stub(),
         }
     }
 }
 
 impl StubModel {
-    pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
+    pub fn new(event_sender: Sender<ApplicationEvent>, command_sender: Sender<Command>) -> Self {
         Self {
             selected_server_url: None,
             event_sender,
+            command_sender,
             stubs: vec![],
             selected_stub_index: 0,
             scroll_offset: 0,
@@ -143,6 +156,7 @@ impl StubModel {
 
 pub enum StubCommand {
     ReadAllStubs,
+    DeleteSelectedStub,
 }
 
 pub enum StubEvent {

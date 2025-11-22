@@ -5,43 +5,52 @@ use tokio::sync::mpsc::Sender;
 
 pub struct ServerModel {
     pub event_sender: Sender<ApplicationEvent>,
+    pub command_sender: Sender<Command>,
     pub server_list: Vec<String>,
     pub current_selected_server_index: Option<usize>,
 }
 
 #[async_trait]
 impl ModelTrait<ServerEvent, ServerCommand> for ServerModel {
-    async fn apply_event(&mut self, event: ServerEvent) -> Option<Command> {
+    async fn apply_event(&mut self, event: ServerEvent) -> Result<(), Box<dyn Error>> {
         match event {
             ServerEvent::ChangeSelectionUp => {
                 self.change_server_selection_up();
+                Ok(())
             }
             ServerEvent::ChangeSelectionDown => {
                 self.change_server_selection_down();
+                Ok(())
             }
             ServerEvent::StartNewServerRegistration => {
                 self.start_new_server_registration();
+                Ok(())
             }
             ServerEvent::AddNewServer { server_url } => {
                 self.add_new_server(server_url);
+                Ok(())
             }
             ServerEvent::DeleteSelectedServer => {
                 self.delete_selected_server();
+                Ok(())
             }
-            ServerEvent::ServerListUpdated(server_list) => self.update_server_list(server_list),
+            ServerEvent::ServerListUpdated(server_list) => {
+                self.update_server_list(server_list);
+                Ok(())
+            }
         }
-        None
     }
 
-    async fn handle_command(&mut self, command: ServerCommand) -> Result<(), Box<dyn Error>> {
+    async fn handle_command(&mut self, _: ServerCommand) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
 
 impl ServerModel {
-    pub fn new(event_sender: Sender<ApplicationEvent>) -> Self {
+    pub fn new(event_sender: Sender<ApplicationEvent>, command_sender: Sender<Command>) -> Self {
         Self {
             event_sender,
+            command_sender,
             server_list: vec![],
             current_selected_server_index: None,
         }

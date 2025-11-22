@@ -20,7 +20,7 @@ impl ServerEditScreen {
 
 #[async_trait]
 impl ScreenTrait for ServerEditScreen {
-    fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
+    fn draw(&self, _: &ApplicationModel, f: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![

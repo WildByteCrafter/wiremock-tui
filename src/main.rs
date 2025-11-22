@@ -50,38 +50,42 @@ async fn run_app<B: ratatui::backend::Backend>(
     send_initial_events(app).await?;
     loop {
         tokio::select! {
-            application_event_option = app.async_channel_receiver.1.recv() => {
-                 if let Some(msg) = application_event_option {
-                    let command_option = match msg {
+
+            event_option = app.event_channel.1.recv() => {
+                 if let Some(msg) = event_option {
+                    let _ = match msg {
                         ApplicationEvent::Global(ev) => app.apply_event(ev).await,
+                        ApplicationEvent::Configuration(ev) => app.config_model.apply_event(ev).await,
                         ApplicationEvent::Server(ev) => app.server_model.apply_event(ev).await,
                         ApplicationEvent::Stub(ev) => app.stub_model.apply_event(ev).await,
-                        ApplicationEvent::Config(ev) => app.config_model.apply_event(ev).await,
                         ApplicationEvent::QuitApplication => return Ok(()),
                     };
-                    if let Some(command) = command_option {
-                        match command{
+                }
+            }
+
+            command_option = app.command_channel.1.recv() => {
+                if let Some(msg) = command_option {
+                    match msg{
                             Command::Global(ev) => app.handle_command(ev).await?,
                             Command::Configuration(ev) => app.config_model.handle_command(ev).await?,
                             Command::Server(ev) => app.server_model.handle_command(ev).await?,
-                            Command::Stub(ev) => app.stub_model.handle_command(ev).await?,}
+                            Command::Stub(ev) => app.stub_model.handle_command(ev).await?,
                     }
                 }
             }
 
             maybe_event = reader.next() => {
-                match maybe_event{
-                    Some(Ok(event))  => {
-                        match &app.screen{
-                            Some(screen) => screen.handle_key_event(&event).await?,
-                            None => {}
+                    match maybe_event{
+                        Some(Ok(event))  => {
+                            match &app.screen{
+                                Some(screen) => screen.handle_key_event(&event).await?,
+                                None => {}
+                            }
                         }
+                        _ => ()
                     }
-                    _ => ()
                 }
-            }
 
-            // Example of doing other async work or a timeout:
             _ = time::sleep(Duration::from_millis(100)) => {
                 match &app.screen {
                     Some(screen) =>   {terminal.draw(|f| screen.draw(app, f))?;
@@ -94,15 +98,15 @@ async fn run_app<B: ratatui::backend::Backend>(
 }
 
 async fn send_initial_events(app: &mut ApplicationModel) -> Result<(), Box<dyn Error>> {
-    app.async_channel_receiver
+    app.event_channel
         .0
         .send(ApplicationEvent::Global(
             GlobalEvent::SwitchToServerSelectionScreen,
         ))
         .await?;
-    app.async_channel_receiver
+    app.event_channel
         .0
-        .send(ApplicationEvent::Config(
+        .send(ApplicationEvent::Configuration(
             ConfigurationEvent::LoadConfigurationRequested,
         ))
         .await?;
