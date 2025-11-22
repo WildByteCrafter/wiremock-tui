@@ -1,6 +1,7 @@
 use crate::model::ScreenTrait;
 use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
 use crate::server::model::ServerEvent;
+use crate::ui;
 use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -32,13 +33,7 @@ impl ScreenTrait for ServerSelectionScreen {
             .split(f.area());
 
         // Title
-        let title = Paragraph::new("Wire Mock - Select Server Connection")
-            .style(
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .block(Block::default().borders(Borders::ALL));
+        let title = ui::widgets::title_paragraph("Wire Mock - Select Server Connection");
         f.render_widget(title, main_layout[0]);
 
         // Server list display

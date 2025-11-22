@@ -18,6 +18,7 @@ mod model;
 mod server;
 mod stub;
 mod wire_mock;
+mod ui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

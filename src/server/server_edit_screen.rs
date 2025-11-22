@@ -1,10 +1,10 @@
-use async_trait::async_trait;
 use crate::model::ScreenTrait;
 use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
+use crate::ui;
+use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::prelude::{Color, Modifier, Style};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 use tokio::sync::mpsc::Sender;
 
@@ -31,13 +31,7 @@ impl ScreenTrait for ServerEditScreen {
             .split(f.area());
 
         // Title
-        let title = Paragraph::new("Wire Mock  - Edit Server Connection")
-            .style(
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .block(Block::default().borders(Borders::ALL));
+        let title = ui::widgets::title_paragraph("Wire Mock  - Edit Server Connection");
         f.render_widget(title, main_layout[0]);
 
         // Commands
@@ -59,22 +53,22 @@ impl ScreenTrait for ServerEditScreen {
 
     async fn handle_key_event(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>> {
         match event {
-           Event::Key(key) => match key.code {
+            Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender
-                        .send(ApplicationEvent::QuitApplication)
-                        .await?;
+                    self.sender.send(ApplicationEvent::QuitApplication).await?;
                     Ok(())
                 }
                 KeyCode::Enter | KeyCode::Char('k') => {
                     self.sender
-                        .send(ApplicationEvent::Global(GlobalEvent::SwitchToServerSelectionScreen))
+                        .send(ApplicationEvent::Global(
+                            GlobalEvent::SwitchToServerSelectionScreen,
+                        ))
                         .await?;
                     Ok(())
                 }
                 _ => Ok(()),
             },
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }

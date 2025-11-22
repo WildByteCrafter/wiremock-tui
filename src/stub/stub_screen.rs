@@ -1,6 +1,7 @@
 use crate::model::ScreenTrait;
 use crate::model::{ApplicationEvent, ApplicationModel};
 use crate::stub::model::StubEvent;
+use crate::ui;
 use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -47,13 +48,8 @@ impl ScreenTrait for StubScreen {
             .split(f.area());
 
         // Title
-        let title = Paragraph::new("Wire Mock Inspector - Stub Mappings")
-            .style(
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .block(Block::default().borders(Borders::ALL));
+        let title = ui::widgets::title_paragraph("Wire Mock Inspector - Stub Mappings");
+
         f.render_widget(title, main_layout[0]);
 
         // Split middle area into two columns
@@ -143,7 +139,9 @@ impl ScreenTrait for StubScreen {
             Event::Key(key) => match key.code {
                 KeyCode::Char('a') => {
                     self.sender
-                        .send(ApplicationEvent::Stub(StubEvent::ToggleAutoRefreshStubsRequested))
+                        .send(ApplicationEvent::Stub(
+                            StubEvent::ToggleAutoRefreshStubsRequested,
+                        ))
                         .await?;
                     Ok(())
                 }
