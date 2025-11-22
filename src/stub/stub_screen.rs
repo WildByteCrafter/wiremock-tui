@@ -152,7 +152,7 @@ impl ScreenTrait for StubScreen {
                     Ok(())
                 }
                 KeyCode::Char('q') => {
-                    self.sender.send(ApplicationEvent::QuitApplication).await?;
+                    self.sender.send(ApplicationEvent::QuitRequested).await?;
                     Ok(())
                 }
                 KeyCode::Char('d') => {

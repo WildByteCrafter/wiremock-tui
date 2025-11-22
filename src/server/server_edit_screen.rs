@@ -55,7 +55,7 @@ impl ScreenTrait for ServerEditScreen {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender.send(ApplicationEvent::QuitApplication).await?;
+                    self.sender.send(ApplicationEvent::QuitRequested).await?;
                     Ok(())
                 }
                 KeyCode::Enter | KeyCode::Char('k') => {

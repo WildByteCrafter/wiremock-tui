@@ -92,7 +92,7 @@ impl ScreenTrait for ServerSelectionScreen {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender.send(ApplicationEvent::QuitApplication).await?;
+                    self.sender.send(ApplicationEvent::QuitRequested).await?;
                     Ok(())
                 }
                 KeyCode::Up | KeyCode::Char('k') => {

@@ -59,7 +59,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                         ApplicationEvent::Configuration(ev) => app.config_model.apply_event(ev).await,
                         ApplicationEvent::Server(ev) => app.server_model.apply_event(ev).await,
                         ApplicationEvent::Stub(ev) => app.stub_model.apply_event(ev).await,
-                        ApplicationEvent::QuitApplication => return Ok(()),
+                        ApplicationEvent::QuitRequested => return Ok(()),
                     };
                 }
             }

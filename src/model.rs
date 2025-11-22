@@ -101,7 +101,7 @@ pub enum Command {
 }
 
 pub enum ApplicationEvent {
-    QuitApplication,
+    QuitRequested,
     Configuration(ConfigurationEvent),
     Global(GlobalEvent),
     Server(ServerEvent),
