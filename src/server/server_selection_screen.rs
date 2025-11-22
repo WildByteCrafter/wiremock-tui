@@ -22,7 +22,7 @@ impl ServerSelectionScreen {
 
 #[async_trait]
 impl ScreenTrait for ServerSelectionScreen {
-    fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
+    fn draw(&self, app: &ApplicationModel, frame: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
@@ -30,11 +30,11 @@ impl ScreenTrait for ServerSelectionScreen {
                 Constraint::Min(0),
                 Constraint::Length(3),
             ])
-            .split(f.area());
+            .split(frame.area());
 
         // Title
         let title = ui::widgets::title_paragraph("Wire Mock - Select Server Connection");
-        f.render_widget(title, main_layout[0]);
+        frame.render_widget(title, main_layout[0]);
 
         // Server list display
         let items: Vec<ListItem> = app
@@ -64,7 +64,7 @@ impl ScreenTrait for ServerSelectionScreen {
                 .borders(Borders::ALL)
                 .title("Server selection"),
         );
-        f.render_widget(server_list, main_layout[1]);
+        frame.render_widget(server_list, main_layout[1]);
 
         // Commands
         let commands = vec![
@@ -84,7 +84,7 @@ impl ScreenTrait for ServerSelectionScreen {
 
         for (index, command) in commands.iter().enumerate() {
             let paragraph = Paragraph::new(*command);
-            f.render_widget(paragraph, control_layout[index]);
+            frame.render_widget(paragraph, control_layout[index]);
         }
     }
 

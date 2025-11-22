@@ -20,7 +20,7 @@ impl ServerEditScreen {
 
 #[async_trait]
 impl ScreenTrait for ServerEditScreen {
-    fn draw(&self, _: &ApplicationModel, f: &mut Frame) {
+    fn draw(&self, _: &ApplicationModel, frame: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
@@ -28,11 +28,11 @@ impl ScreenTrait for ServerEditScreen {
                 Constraint::Min(0),
                 Constraint::Length(3),
             ])
-            .split(f.area());
+            .split(frame.area());
 
         // Title
         let title = ui::widgets::title_paragraph("Wire Mock  - Edit Server Connection");
-        f.render_widget(title, main_layout[0]);
+        frame.render_widget(title, main_layout[0]);
 
         // Commands
         let commands = vec!["q : Quit", "Enter : Confirm"];
@@ -47,7 +47,7 @@ impl ScreenTrait for ServerEditScreen {
 
         for (index, command) in commands.iter().enumerate() {
             let paragraph = Paragraph::new(*command);
-            f.render_widget(paragraph, control_layout[index]);
+            frame.render_widget(paragraph, control_layout[index]);
         }
     }
 
