@@ -37,7 +37,7 @@ impl StubScreen {
 
 #[async_trait]
 impl ScreenTrait for StubScreen {
-    fn draw(&self, app: &ApplicationModel, f: &mut Frame) {
+    fn draw(&self, app: &ApplicationModel, frame: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![
@@ -45,12 +45,12 @@ impl ScreenTrait for StubScreen {
                 Constraint::Min(0),
                 Constraint::Length(3),
             ])
-            .split(f.area());
+            .split(frame.area());
 
         // Title
         let title = ui::widgets::title_paragraph("Wire Mock Inspector - Stub Mappings");
 
-        f.render_widget(title, main_layout[0]);
+        frame.render_widget(title, main_layout[0]);
 
         // Split middle area into two columns
         let content_layout = Layout::default()
@@ -96,7 +96,7 @@ impl ScreenTrait for StubScreen {
                 .title("Stub Mappings"),
         );
 
-        f.render_widget(stubs_list, content_layout[0]);
+        frame.render_widget(stubs_list, content_layout[0]);
 
         // Details view (right side)
         let details = self.get_stub_details(app);
@@ -107,7 +107,7 @@ impl ScreenTrait for StubScreen {
             .wrap(Wrap { trim: false })
             .scroll((app.stub_model.scroll_offset as u16, 0));
 
-        f.render_widget(details_paragraph, content_layout[1]);
+        frame.render_widget(details_paragraph, content_layout[1]);
 
         // Commands
         let commands = vec![
@@ -130,7 +130,7 @@ impl ScreenTrait for StubScreen {
 
         for (index, command) in commands.iter().enumerate() {
             let paragraph = Paragraph::new(*command);
-            f.render_widget(paragraph, control_layout[index]);
+            frame.render_widget(paragraph, control_layout[index]);
         }
     }
 
