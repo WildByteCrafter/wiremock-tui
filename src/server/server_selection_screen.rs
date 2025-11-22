@@ -32,7 +32,7 @@ impl ScreenTrait for ServerSelectionScreen {
             .split(f.area());
 
         // Title
-        let title = Paragraph::new("Wire Mock Inspector  - Connection")
+        let title = Paragraph::new("Wire Mock - Select Server Connection")
             .style(
                 Style::default()
                     .fg(Color::Cyan)
@@ -72,14 +72,18 @@ impl ScreenTrait for ServerSelectionScreen {
         f.render_widget(server_list, main_layout[1]);
 
         // Commands
-        let commands = vec!["↑ / k : Up", "↓ / j : Down", "Enter : Confirm"];
+        let commands = vec![
+            "↑ / k : Up",
+            "↓ / j : Down",
+            "e : Edit server connection",
+            "Enter : Confirm",
+        ];
 
         let control_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
-                Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, commands.len() as u32);
+                commands.len()
             ])
             .split(main_layout[2]);
 
@@ -93,9 +97,7 @@ impl ScreenTrait for ServerSelectionScreen {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender
-                        .send(ApplicationEvent::QuitApplication)
-                        .await?;
+                    self.sender.send(ApplicationEvent::QuitApplication).await?;
                     Ok(())
                 }
                 KeyCode::Up | KeyCode::Char('k') => {

@@ -31,7 +31,7 @@ impl ScreenTrait for ServerEditScreen {
             .split(f.area());
 
         // Title
-        let title = Paragraph::new("Wire Mock Inspector  - Connection")
+        let title = Paragraph::new("Wire Mock  - Edit Server Connection")
             .style(
                 Style::default()
                     .fg(Color::Cyan)
@@ -46,9 +46,8 @@ impl ScreenTrait for ServerEditScreen {
         let control_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
-                Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, commands.len() as u32);
+                commands.len()
             ])
             .split(main_layout[2]);
 
