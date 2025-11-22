@@ -86,7 +86,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                     }
                 }
 
-            _ = time::sleep(Duration::from_millis(100)) => {
+            _ = time::sleep(Duration::from_millis(70)) => {
                 match &app.screen {
                     Some(screen) =>   {terminal.draw(|f| screen.draw(app, f))?;
                     },

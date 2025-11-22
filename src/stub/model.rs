@@ -50,7 +50,10 @@ impl ModelTrait<StubEvent, StubCommand> for StubModel {
                     .await?;
                 Ok(())
             }
-            StubEvent::ToggleAutoRefresh => Ok(()),
+            StubEvent::ToggleAutoRefreshStubsRequested => {
+                self.toggle_auto_refresh_stubs();
+                Ok(())
+            }
         }
     }
 
@@ -164,9 +167,9 @@ pub enum StubEvent {
     SelectPrevious,
     ScrollDetailsUp,
     ScrollDetailsDown,
+    ToggleAutoRefreshStubsRequested,
     DeleteSelectedRequested,
     ReadAllStubsRequested,
-    ToggleAutoRefresh,
 }
 
 #[derive(Error, Debug)]

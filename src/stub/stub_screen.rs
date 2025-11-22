@@ -143,7 +143,7 @@ impl ScreenTrait for StubScreen {
             Event::Key(key) => match key.code {
                 KeyCode::Char('a') => {
                     self.sender
-                        .send(ApplicationEvent::Stub(StubEvent::ToggleAutoRefresh))
+                        .send(ApplicationEvent::Stub(StubEvent::ToggleAutoRefreshStubsRequested))
                         .await?;
                     Ok(())
                 }
