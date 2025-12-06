@@ -1,6 +1,6 @@
 use crate::model::ScreenTrait;
-use crate::model::{ApplicationEvent, ApplicationModel, GlobalEvent};
-use crate::server::model::ServerEvent;
+use crate::model::{Message, ApplicationModel, GlobalMsg};
+use crate::server::model::ServerMsg;
 use crate::ui;
 use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
@@ -11,11 +11,11 @@ use ratatui::Frame;
 use tokio::sync::mpsc::Sender;
 
 pub struct ServerSelectionScreen {
-    sender: Sender<ApplicationEvent>,
+    sender: Sender<Message>,
 }
 
 impl ServerSelectionScreen {
-    pub fn new(sender: Sender<ApplicationEvent>) -> Self {
+    pub fn new(sender: Sender<Message>) -> Self {
         ServerSelectionScreen { sender }
     }
 }
@@ -92,32 +92,32 @@ impl ScreenTrait for ServerSelectionScreen {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender.send(ApplicationEvent::QuitRequested).await?;
+                    self.sender.send(Message::QuitRequested).await?;
                     Ok(())
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
                     self.sender
-                        .send(ApplicationEvent::Server(ServerEvent::ChangeSelectionUp))
+                        .send(Message::Server(ServerMsg::LoadConfigurationRequested))
                         .await?;
                     Ok(())
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     self.sender
-                        .send(ApplicationEvent::Server(ServerEvent::ChangeSelectionDown))
+                        .send(Message::Server(ServerMsg::ChangeSelectionDown))
                         .await?;
                     Ok(())
                 }
                 KeyCode::Char('e') => {
                     self.sender
-                        .send(ApplicationEvent::Global(
-                            GlobalEvent::SwitchToConnectionEditScreen,
+                        .send(Message::Global(
+                            GlobalMsg::SwitchToConnectionEditScreen,
                         ))
                         .await?;
                     Ok(())
                 }
                 KeyCode::Enter => {
                     self.sender
-                        .send(ApplicationEvent::Global(GlobalEvent::SwitchToStubScreen))
+                        .send(Message::Global(GlobalMsg::SwitchToStubScreen))
                         .await?;
                     Ok(())
                 }

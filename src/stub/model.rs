@@ -1,4 +1,4 @@
-use crate::model::{ApplicationEvent, Command, ModelTrait};
+use crate::model::{Message, Command, ModelTrait};
 use crate::stub::model::StubCommand::ReadAllStubs;
 use crate::wire_mock;
 use async_trait::async_trait;
@@ -10,7 +10,7 @@ use tokio::time::interval;
 
 pub struct StubModel {
     pub selected_server_url: Option<String>,
-    pub event_sender: Sender<ApplicationEvent>,
+    pub event_sender: Sender<Message>,
     pub command_sender: Sender<Command>,
     pub stubs: Vec<wire_mock::client::StubMapping>,
     pub selected_stub_index: usize,
@@ -19,38 +19,38 @@ pub struct StubModel {
 }
 
 #[async_trait]
-impl ModelTrait<StubEvent, StubCommand> for StubModel {
-    async fn apply_event(&mut self, event: StubEvent) -> Result<(), Box<dyn Error>> {
+impl ModelTrait<StubMsg, StubCommand> for StubModel {
+    async fn apply_event(&mut self, event: StubMsg) -> Result<(), Box<dyn Error>> {
         match event {
-            StubEvent::SelectNext => {
+            StubMsg::SelectNext => {
                 self.select_next_stub();
                 Ok(())
             }
-            StubEvent::SelectPrevious => {
+            StubMsg::SelectPrevious => {
                 self.select_previous_stub();
                 Ok(())
             }
-            StubEvent::ScrollDetailsUp => {
+            StubMsg::ScrollDetailsUp => {
                 self.scroll_details_up();
                 Ok(())
             }
-            StubEvent::ScrollDetailsDown => {
+            StubMsg::ScrollDetailsDown => {
                 self.scroll_details_down();
                 Ok(())
             }
-            StubEvent::DeleteSelectedRequested => {
+            StubMsg::DeleteSelectedRequested => {
                 self.command_sender
                     .send(Command::Stub(StubCommand::DeleteSelectedStub))
                     .await?;
                 Ok(())
             }
-            StubEvent::ReadAllStubsRequested => {
+            StubMsg::ReadAllStubsRequested => {
                 self.command_sender
                     .send(Command::Stub(ReadAllStubs))
                     .await?;
                 Ok(())
             }
-            StubEvent::ToggleAutoRefreshStubsRequested => {
+            StubMsg::ToggleAutoRefreshStubsRequested => {
                 self.toggle_auto_refresh_stubs();
                 Ok(())
             }
@@ -66,7 +66,7 @@ impl ModelTrait<StubEvent, StubCommand> for StubModel {
 }
 
 impl StubModel {
-    pub fn new(event_sender: Sender<ApplicationEvent>, command_sender: Sender<Command>) -> Self {
+    pub fn new(event_sender: Sender<Message>, command_sender: Sender<Command>) -> Self {
         Self {
             selected_server_url: None,
             event_sender,
@@ -120,7 +120,7 @@ impl StubModel {
             loop {
                 interval.tick().await;
                 if sender
-                    .send(ApplicationEvent::Stub(StubEvent::ReadAllStubsRequested))
+                    .send(Message::Stub(StubMsg::ReadAllStubsRequested))
                     .await
                     .is_err()
                 {
@@ -162,7 +162,7 @@ pub enum StubCommand {
     DeleteSelectedStub,
 }
 
-pub enum StubEvent {
+pub enum StubMsg {
     SelectNext,
     SelectPrevious,
     ScrollDetailsUp,

@@ -1,5 +1,5 @@
-use crate::configuration::model::ConfigurationEvent;
-use crate::model::{ApplicationEvent, Command, GlobalEvent, ModelTrait};
+use crate::model::{Message, Command, GlobalMsg, ModelTrait};
+use crate::server::model::ServerMsg;
 use crossterm::event::EventStream;
 use crossterm::{
     execute,
@@ -13,12 +13,11 @@ use std::io;
 use std::time::Duration;
 use tokio::time;
 
-mod configuration;
 mod model;
 mod server;
 mod stub;
-mod wire_mock;
 mod ui;
+mod wire_mock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -55,11 +54,10 @@ async fn run_app<B: ratatui::backend::Backend>(
             event_option = app.event_channel.1.recv() => {
                  if let Some(msg) = event_option {
                     let _ = match msg {
-                        ApplicationEvent::Global(ev) => app.apply_event(ev).await,
-                        ApplicationEvent::Configuration(ev) => app.config_model.apply_event(ev).await,
-                        ApplicationEvent::Server(ev) => app.server_model.apply_event(ev).await,
-                        ApplicationEvent::Stub(ev) => app.stub_model.apply_event(ev).await,
-                        ApplicationEvent::QuitRequested => return Ok(()),
+                        Message::Global(ev) => app.apply_event(ev).await,
+                        Message::Server(ev) => app.server_model.apply_event(ev).await,
+                        Message::Stub(ev) => app.stub_model.apply_event(ev).await,
+                        Message::QuitRequested => return Ok(()),
                     };
                 }
             }
@@ -68,7 +66,6 @@ async fn run_app<B: ratatui::backend::Backend>(
                 if let Some(msg) = command_option {
                     match msg{
                             Command::Global(ev) => app.handle_command(ev).await?,
-                            Command::Configuration(ev) => app.config_model.handle_command(ev).await?,
                             Command::Server(ev) => app.server_model.handle_command(ev).await?,
                             Command::Stub(ev) => app.stub_model.handle_command(ev).await?,
                     }
@@ -101,14 +98,14 @@ async fn run_app<B: ratatui::backend::Backend>(
 async fn send_initial_events(app: &mut ApplicationModel) -> Result<(), Box<dyn Error>> {
     app.event_channel
         .0
-        .send(ApplicationEvent::Global(
-            GlobalEvent::SwitchToServerSelectionScreen,
+        .send(Message::Server(
+            ServerMsg::LoadConfigurationRequested,
         ))
         .await?;
     app.event_channel
         .0
-        .send(ApplicationEvent::Configuration(
-            ConfigurationEvent::LoadConfigurationRequested,
+        .send(Message::Global(
+            GlobalMsg::SwitchToServerSelectionScreen,
         ))
         .await?;
     Ok(())
