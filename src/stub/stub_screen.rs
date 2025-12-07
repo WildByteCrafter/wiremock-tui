@@ -1,5 +1,5 @@
 use crate::model::ScreenTrait;
-use crate::model::{Message, ApplicationModel};
+use crate::model::{ApplicationModel, Message};
 use crate::stub::model::StubMsg;
 use crate::ui;
 use async_trait::async_trait;
@@ -8,7 +8,7 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
-use sync::mpsc::Sender;
+use sync::broadcast::Sender;
 use tokio::sync;
 
 pub struct StubScreen {
@@ -139,50 +139,38 @@ impl ScreenTrait for StubScreen {
             Event::Key(key) => match key.code {
                 KeyCode::Char('a') => {
                     self.sender
-                        .send(Message::Stub(
-                            StubMsg::ToggleAutoRefreshStubsRequested,
-                        ))
-                        .await?;
+                        .send(Message::Stub(StubMsg::ToggleAutoRefreshStubsRequested))?;
                     Ok(())
                 }
                 KeyCode::Char('r') => {
                     self.sender
-                        .send(Message::Stub(StubMsg::ReadAllStubsRequested))
-                        .await?;
+                        .send(Message::Stub(StubMsg::ReadAllStubsRequested))?;
                     Ok(())
                 }
                 KeyCode::Char('q') => {
-                    self.sender.send(Message::QuitRequested).await?;
+                    self.sender.send(Message::QuitRequested)?;
                     Ok(())
                 }
                 KeyCode::Char('d') => {
                     self.sender
-                        .send(Message::Stub(StubMsg::DeleteSelectedRequested))
-                        .await?;
+                        .send(Message::Stub(StubMsg::DeleteSelectedRequested))?;
                     Ok(())
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
-                    self.sender
-                        .send(Message::Stub(StubMsg::SelectPrevious))
-                        .await?;
+                    self.sender.send(Message::Stub(StubMsg::SelectPrevious))?;
                     Ok(())
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
-                    self.sender
-                        .send(Message::Stub(StubMsg::SelectNext))
-                        .await?;
+                    self.sender.send(Message::Stub(StubMsg::SelectNext))?;
                     Ok(())
                 }
                 KeyCode::PageUp => {
-                    self.sender
-                        .send(Message::Stub(StubMsg::ScrollDetailsUp))
-                        .await?;
+                    self.sender.send(Message::Stub(StubMsg::ScrollDetailsUp))?;
                     Ok(())
                 }
                 KeyCode::PageDown => {
                     self.sender
-                        .send(Message::Stub(StubMsg::ScrollDetailsDown))
-                        .await?;
+                        .send(Message::Stub(StubMsg::ScrollDetailsDown))?;
                     Ok(())
                 }
                 _ => Ok(()),

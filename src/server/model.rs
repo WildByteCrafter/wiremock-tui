@@ -2,9 +2,9 @@ use crate::model::{Command, Message, ModelTrait};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::broadcast::Sender;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ServerConfiguration {
     pub server_list: Vec<String>,
     pub selected_server_index: Option<usize>,
@@ -44,8 +44,7 @@ impl ModelTrait<ServerMsg, ServerCommand> for ServerModel {
             }
             ServerMsg::LoadConfigurationRequested => {
                 self.command_sender
-                    .send(Command::Server(ServerCommand::LoadConfiguration))
-                    .await?;
+                    .send(Command::Server(ServerCommand::LoadConfiguration))?;
                 Ok(())
             }
             ServerMsg::ConfigurationLoaded(configuration) => {
@@ -64,8 +63,7 @@ impl ModelTrait<ServerMsg, ServerCommand> for ServerModel {
                 self.msg_sender
                     .send(Message::Server(ServerMsg::ConfigurationLoaded(
                         server_configuration,
-                    )))
-                    .await?;
+                    )))?;
                 Ok(())
             }
         }
@@ -125,10 +123,12 @@ impl ServerModel {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum ServerCommand {
     LoadConfiguration,
 }
 
+#[derive(Clone, Debug)]
 pub enum ServerMsg {
     LoadConfigurationRequested,
     ConfigurationLoaded(ServerConfiguration),

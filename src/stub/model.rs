@@ -1,11 +1,11 @@
-use crate::model::{Message, Command, ModelTrait};
+use crate::model::{Command, Message, ModelTrait};
 use crate::stub::model::StubCommand::ReadAllStubs;
 use crate::wire_mock;
 use async_trait::async_trait;
 use std::error::Error;
 use std::time::Duration;
 use thiserror::Error;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::broadcast::Sender;
 use tokio::time::interval;
 
 pub struct StubModel {
@@ -40,14 +40,11 @@ impl ModelTrait<StubMsg, StubCommand> for StubModel {
             }
             StubMsg::DeleteSelectedRequested => {
                 self.command_sender
-                    .send(Command::Stub(StubCommand::DeleteSelectedStub))
-                    .await?;
+                    .send(Command::Stub(StubCommand::DeleteSelectedStub))?;
                 Ok(())
             }
             StubMsg::ReadAllStubsRequested => {
-                self.command_sender
-                    .send(Command::Stub(ReadAllStubs))
-                    .await?;
+                self.command_sender.send(Command::Stub(ReadAllStubs))?;
                 Ok(())
             }
             StubMsg::ToggleAutoRefreshStubsRequested => {
@@ -121,7 +118,6 @@ impl StubModel {
                 interval.tick().await;
                 if sender
                     .send(Message::Stub(StubMsg::ReadAllStubsRequested))
-                    .await
                     .is_err()
                 {
                     break;
@@ -157,11 +153,13 @@ impl StubModel {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum StubCommand {
     ReadAllStubs,
     DeleteSelectedStub,
 }
 
+#[derive(Clone, Debug)]
 pub enum StubMsg {
     SelectNext,
     SelectPrevious,

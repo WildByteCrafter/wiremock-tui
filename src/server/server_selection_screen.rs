@@ -8,7 +8,7 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 use ratatui::Frame;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::broadcast::Sender;
 
 pub struct ServerSelectionScreen {
     sender: Sender<Message>,
@@ -92,31 +92,27 @@ impl ScreenTrait for ServerSelectionScreen {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender.send(Message::QuitRequested).await?;
+                    self.sender.send(Message::QuitRequested)?;
                     Ok(())
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
                     self.sender
-                        .send(Message::Server(ServerMsg::ChangeSelectionUp))
-                        .await?;
+                        .send(Message::Server(ServerMsg::ChangeSelectionUp))?;
                     Ok(())
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     self.sender
-                        .send(Message::Server(ServerMsg::ChangeSelectionDown))
-                        .await?;
+                        .send(Message::Server(ServerMsg::ChangeSelectionDown))?;
                     Ok(())
                 }
                 KeyCode::Char('e') => {
                     self.sender
-                        .send(Message::Global(GlobalMsg::SwitchToConnectionEditScreen))
-                        .await?;
+                        .send(Message::Global(GlobalMsg::SwitchToConnectionEditScreen))?;
                     Ok(())
                 }
                 KeyCode::Enter => {
                     self.sender
-                        .send(Message::Global(GlobalMsg::SwitchToStubScreen))
-                        .await?;
+                        .send(Message::Global(GlobalMsg::SwitchToStubScreen))?;
                     Ok(())
                 }
                 _ => Ok(()),

@@ -11,8 +11,7 @@ use std::error::Error;
 use stub::model::StubModel;
 use stub::model::StubMsg;
 use thiserror::Error;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::broadcast::{Receiver, Sender};
 
 pub struct ApplicationModel {
     pub screen: Option<Box<dyn ScreenTrait + Send>>,
@@ -50,8 +49,8 @@ impl ModelTrait<GlobalMsg, GlobalCommand> for ApplicationModel {
 
 impl ApplicationModel {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        let event_channel = mpsc::channel::<Message>(100);
-        let command_channel = mpsc::channel::<Command>(100);
+        let event_channel = tokio::sync::broadcast::channel::<Message>(100);
+        let command_channel = tokio::sync::broadcast::channel::<Command>(100);
         let application_model = ApplicationModel {
             screen: None,
             server_model: ServerModel::new(event_channel.0.clone(), command_channel.0.clone()),
@@ -79,12 +78,14 @@ impl ApplicationModel {
     }
 }
 
+#[derive(Clone,Debug)]
 pub enum Command {
     Server(ServerCommand),
     Stub(StubCommand),
     Global(GlobalCommand),
 }
 
+#[derive(Clone,Debug)]
 pub enum Message {
     QuitRequested,
     Global(GlobalMsg),
@@ -92,12 +93,14 @@ pub enum Message {
     Stub(StubMsg),
 }
 
+#[derive(Clone,Debug)]
 pub enum GlobalMsg {
     SwitchToStubScreen,
     SwitchToServerSelectionScreen,
     SwitchToConnectionEditScreen,
 }
 
+#[derive(Clone,Debug)]
 pub enum GlobalCommand {}
 
 #[async_trait]

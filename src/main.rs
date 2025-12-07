@@ -1,4 +1,4 @@
-use crate::model::{Message, Command, GlobalMsg, ModelTrait};
+use crate::model::{Command, GlobalMsg, Message, ModelTrait};
 use crate::server::model::ServerMsg;
 use crossterm::event::EventStream;
 use crossterm::{
@@ -52,7 +52,7 @@ async fn run_app<B: ratatui::backend::Backend>(
         tokio::select! {
 
             event_option = app.event_channel.1.recv() => {
-                 if let Some(msg) = event_option {
+                 if let Ok(msg) = event_option {
                     let _ = match msg {
                         Message::Global(ev) => app.apply_event(ev).await,
                         Message::Server(ev) => app.server_model.apply_event(ev).await,
@@ -63,7 +63,7 @@ async fn run_app<B: ratatui::backend::Backend>(
             }
 
             command_option = app.command_channel.1.recv() => {
-                if let Some(msg) = command_option {
+                if let Ok(msg) = command_option {
                     match msg{
                             Command::Global(ev) => app.handle_command(ev).await?,
                             Command::Server(ev) => app.server_model.handle_command(ev).await?,
@@ -98,15 +98,9 @@ async fn run_app<B: ratatui::backend::Backend>(
 async fn send_initial_events(app: &mut ApplicationModel) -> Result<(), Box<dyn Error>> {
     app.event_channel
         .0
-        .send(Message::Server(
-            ServerMsg::LoadConfigurationRequested,
-        ))
-        .await?;
+        .send(Message::Server(ServerMsg::LoadConfigurationRequested))?;
     app.event_channel
         .0
-        .send(Message::Global(
-            GlobalMsg::SwitchToServerSelectionScreen,
-        ))
-        .await?;
+        .send(Message::Global(GlobalMsg::SwitchToServerSelectionScreen))?;
     Ok(())
 }

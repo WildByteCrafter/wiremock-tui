@@ -1,12 +1,12 @@
 use crate::model::ScreenTrait;
-use crate::model::{Message, ApplicationModel, GlobalMsg};
+use crate::model::{ApplicationModel, GlobalMsg, Message};
 use crate::ui;
 use async_trait::async_trait;
 use crossterm::event::{Event, KeyCode};
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::broadcast::Sender;
 
 pub struct ServerEditScreen {
     sender: Sender<Message>,
@@ -55,15 +55,12 @@ impl ScreenTrait for ServerEditScreen {
         match event {
             Event::Key(key) => match key.code {
                 KeyCode::Char('q') => {
-                    self.sender.send(Message::QuitRequested).await?;
+                    self.sender.send(Message::QuitRequested)?;
                     Ok(())
                 }
                 KeyCode::Enter | KeyCode::Char('k') => {
                     self.sender
-                        .send(Message::Global(
-                            GlobalMsg::SwitchToServerSelectionScreen,
-                        ))
-                        .await?;
+                        .send(Message::Global(GlobalMsg::SwitchToServerSelectionScreen))?;
                     Ok(())
                 }
                 _ => Ok(()),
