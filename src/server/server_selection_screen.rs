@@ -1,5 +1,5 @@
 use crate::model::ScreenTrait;
-use crate::model::{Message, ApplicationModel, GlobalMsg};
+use crate::model::{ApplicationModel, GlobalMsg, Message};
 use crate::server::model::ServerMsg;
 use crate::ui;
 use async_trait::async_trait;
@@ -97,7 +97,7 @@ impl ScreenTrait for ServerSelectionScreen {
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
                     self.sender
-                        .send(Message::Server(ServerMsg::LoadConfigurationRequested))
+                        .send(Message::Server(ServerMsg::ChangeSelectionUp))
                         .await?;
                     Ok(())
                 }
@@ -109,9 +109,7 @@ impl ScreenTrait for ServerSelectionScreen {
                 }
                 KeyCode::Char('e') => {
                     self.sender
-                        .send(Message::Global(
-                            GlobalMsg::SwitchToConnectionEditScreen,
-                        ))
+                        .send(Message::Global(GlobalMsg::SwitchToConnectionEditScreen))
                         .await?;
                     Ok(())
                 }

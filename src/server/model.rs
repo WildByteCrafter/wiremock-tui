@@ -38,10 +38,6 @@ impl ModelTrait<ServerMsg, ServerCommand> for ServerModel {
                 self.change_server_selection_down();
                 Ok(())
             }
-            ServerMsg::StartNewServerRegistration => {
-                self.start_new_server_registration();
-                Ok(())
-            }
             ServerMsg::DeleteSelectedServer => {
                 self.delete_selected_server();
                 Ok(())
@@ -52,7 +48,7 @@ impl ModelTrait<ServerMsg, ServerCommand> for ServerModel {
                     .await?;
                 Ok(())
             }
-            ServerMsg::ConfigurationLoaded(configuration    ) => {
+            ServerMsg::ConfigurationLoaded(configuration) => {
                 self.server_list = configuration.server_list;
                 self.current_selected_server_index = configuration.selected_server_index;
                 Ok(())
@@ -63,8 +59,13 @@ impl ModelTrait<ServerMsg, ServerCommand> for ServerModel {
     async fn handle_command(&mut self, command: ServerCommand) -> Result<(), Box<dyn Error>> {
         match command {
             ServerCommand::LoadConfiguration => {
-                let server_configuration: ServerConfiguration = confy::load("wiremock-tui", "servers")?;
-                self.msg_sender.send(Message::Server(ServerMsg::ConfigurationLoaded(server_configuration))).await?;
+                let server_configuration: ServerConfiguration =
+                    confy::load("wiremock-tui", "servers")?;
+                self.msg_sender
+                    .send(Message::Server(ServerMsg::ConfigurationLoaded(
+                        server_configuration,
+                    )))
+                    .await?;
                 Ok(())
             }
         }
@@ -116,7 +117,6 @@ impl ServerModel {
     fn add_new_server(&self, server_url: String) {
         println!("Adding new server: {server_url}");
     }
-    fn start_new_server_registration(&self) {}
 
     fn delete_selected_server(&self) {
         if self.current_selected_server_index.is_none() {
@@ -134,6 +134,5 @@ pub enum ServerMsg {
     ConfigurationLoaded(ServerConfiguration),
     ChangeSelectionUp,
     ChangeSelectionDown,
-    StartNewServerRegistration,
     DeleteSelectedServer,
 }
