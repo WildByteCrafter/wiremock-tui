@@ -1,5 +1,14 @@
-use std::io::stdout;
+mod app;
+mod ui;
+mod event_manager;
+mod contract;
+mod server;
 
-fn main() {
-    println!("hello");
+#[tokio::main]
+async fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    let terminal = ratatui::init();
+    let result  = app::App::new().run(terminal).await;
+    ratatui::restore();
+    result
 }
