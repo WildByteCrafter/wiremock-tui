@@ -1,5 +1,5 @@
 use crate::server::server_module::{ServerCommands, ServerEvents};
-use ratatui::widgets::Widget;
+use ratatui::Frame;
 
 #[derive(Clone)]
 pub enum Command {
@@ -24,8 +24,8 @@ pub struct CommandTriggerPayload {
 }
 
 impl CommandTriggerPayload {
-    pub fn get_command_triggers(&self) -> Vec<CommandTrigger> {
-        self.command_triggers.clone()
+    pub fn get_command_triggers(self) -> Vec<CommandTrigger> {
+        self.command_triggers
     }
 }
 
@@ -38,13 +38,9 @@ pub struct CommandTrigger {
 
 #[derive(Clone)]
 pub enum Event {
-    Application(ApplicationEvents),
     ServerModule(ServerEvents),
     StubModule,
 }
-
-#[derive(Clone)]
-pub enum ApplicationEvents {}
 
 pub trait Task: Send {
     fn execute(&self) -> Result<Command, color_eyre::Report>;
@@ -56,26 +52,19 @@ pub enum ProcessingResult {
 }
 
 pub struct ProcessingResultPayload {
-    events: Vec<Event>,
-    commands: Vec<Command>,
-    tasks: Vec<Box<dyn Task>>,
+    pub events: Vec<Event>,
+    pub tasks: Vec<Box<dyn Task>>,
 }
 
 impl ProcessingResultPayload {
     pub fn new() -> Self {
         Self {
             events: Vec::new(),
-            commands: Vec::new(),
             tasks: Vec::new(),
         }
     }
     pub fn with_event(mut self, event: Event) -> Self {
         self.events.push(event);
-        self
-    }
-
-    pub fn with_command(mut self, command: Command) -> Self {
-        self.commands.push(command);
         self
     }
 
@@ -86,25 +75,17 @@ impl ProcessingResultPayload {
 
     pub fn add_result(&mut self, result: ProcessingResultPayload) {
         self.events.extend(result.events);
-        self.commands.extend(result.commands);
         self.tasks.extend(result.tasks);
-    }
-
-    pub fn get_events(&self) -> Vec<Event> {
-        self.events.clone()
-    }
-
-    pub fn get_commands(&self) -> Vec<Command> {
-        self.commands.clone()
-    }
-
-    pub fn get_tasks(self) -> Vec<Box<dyn Task>> {
-        self.tasks
     }
 }
 
 pub trait Module {
-    fn process_command(&mut self, command: &Command) -> Result<ProcessingResult, color_eyre::Report>;
+    fn name(&self) -> &'static str;
 
-    fn main_widget(&self) -> Option<Box<dyn Widget>>;
+    fn can_process_command(&self, command: &Command) -> bool;
+
+    fn process_command(&mut self, command: Command)
+    -> Result<ProcessingResult, color_eyre::Report>;
+
+    fn render(&self, frame: &mut Frame);
 }

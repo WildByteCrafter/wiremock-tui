@@ -1,10 +1,12 @@
-use crate::contract::{Command, Module, ProcessingResult, ProcessingResultPayload, Task};
+use crate::contract::{Command, Event, Module, ProcessingResult, ProcessingResultPayload, Task};
 use color_eyre::Report;
-use ratatui::prelude::Widget;
+use ratatui::widgets::Paragraph;
+use ratatui::Frame;
 use ProcessingResult::NothingDone;
 
 #[derive(Clone)]
 pub enum ServerEvents {
+    ServerSelectionReadyForDisplay,
     ServerSelected { server: String },
 }
 
@@ -37,26 +39,48 @@ impl ServerModule {
 }
 
 impl Module for ServerModule {
-    fn process_command(&mut self, command: &Command) -> Result<ProcessingResult, Report> {
-        let server_command = match command {
-            Command::ServerModule(server_commands) => server_commands,
-            _ => return Ok(NothingDone),
-        };
-        match server_command {
-            ServerCommands::ShowServerSelection => {
+    fn name(&self) -> &'static str {
+        "server"
+    }
+
+    fn can_process_command(&self, command: &Command) -> bool {
+        match command {
+            Command::ServerModule(_) => true,
+            _ => false,
+        }
+    }
+
+    fn process_command(&mut self, command: Command) -> Result<ProcessingResult, Report> {
+        if !self.can_process_command(&command) {
+            return Ok(NothingDone);
+        }
+        match command {
+            Command::ServerModule(ServerCommands::ShowServerSelection) => {
                 let task = Box::new(LoadServerTask::new());
-                Ok(ProcessingResult::Processed(ProcessingResultPayload::new().with_tasks(task)))
+                Ok(ProcessingResult::Processed(
+                    ProcessingResultPayload::new().with_tasks(task),
+                ))
             }
-            ServerCommands::ImportLoadedServerList { server_list } => {
+            Command::ServerModule(ServerCommands::ImportLoadedServerList { server_list }) => {
                 self.server_list.extend(server_list.clone());
-                Ok(ProcessingResult::Processed(ProcessingResultPayload::new()))
+                Ok(ProcessingResult::Processed(ProcessingResultPayload::new().with_event(Event::ServerModule(ServerEvents::ServerSelectionReadyForDisplay))))
             }
+            Command::ServerModule(ServerCommands::ServerSelectionUp) => Ok(NothingDone),
+            Command::ServerModule(ServerCommands::ServerSelectionDown) => Ok(NothingDone),
+            Command::ServerModule(ServerCommands::SelectServer) => Ok(ProcessingResult::Processed(
+                ProcessingResultPayload::new().with_event(Event::ServerModule(
+                    ServerEvents::ServerSelected {
+                        server: self.server_list[0].clone(),
+                    },
+                )),
+            )),
             _ => Ok(NothingDone),
         }
     }
 
-    fn main_widget(&self) -> Option<Box<dyn Widget>> {
-        todo!()
+    fn render(&self, frame: &mut Frame) {
+        let paragraph = Paragraph::new("Server selection");
+        frame.render_widget(paragraph, frame.area());
     }
 }
 

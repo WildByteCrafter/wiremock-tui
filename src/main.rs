@@ -1,5 +1,4 @@
 mod app;
-mod ui;
 mod event_manager;
 mod contract;
 mod server;
