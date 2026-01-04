@@ -1,4 +1,7 @@
-use crate::contract::{Command, Event, Module, ProcessingResult, ProcessingResultPayload, Task};
+use crate::contract::{
+    ApplicationCommands, Command, CommandTrigger, CommandTriggerPayload, Event, Module,
+    ProcessingResult, ProcessingResultPayload, Task,
+};
 use color_eyre::Report;
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
@@ -38,9 +41,11 @@ impl ServerModule {
     }
 }
 
+const MODULE_NAME: &'static str = "server";
+
 impl Module for ServerModule {
     fn name(&self) -> &'static str {
-        "server"
+        MODULE_NAME
     }
 
     fn can_process_command(&self, command: &Command) -> bool {
@@ -63,7 +68,32 @@ impl Module for ServerModule {
             }
             Command::ServerModule(ServerCommands::ImportLoadedServerList { server_list }) => {
                 self.server_list.extend(server_list.clone());
-                Ok(ProcessingResult::Processed(ProcessingResultPayload::new().with_event(Event::ServerModule(ServerEvents::ServerSelectionReadyForDisplay))))
+                Ok(ProcessingResult::Processed(
+                    ProcessingResultPayload::new()
+                        .with_event(Event::ServerModule(
+                            ServerEvents::ServerSelectionReadyForDisplay,
+                        ))
+                        .with_command(Command::Application(
+                            ApplicationCommands::SetCommandTriggers {
+                                command_trigger_payload: CommandTriggerPayload {
+                                    module_name: MODULE_NAME,
+                                    command_triggers: vec![CommandTrigger {
+                                        command_name: "up",
+                                        command: Command::ServerModule(
+                                            ServerCommands::ServerSelectionUp,
+                                        ),
+                                        triggers: vec!["j".to_string()],
+                                    },CommandTrigger{
+                                        command_name: "down",
+                                        command: Command::ServerModule(
+                                            ServerCommands::ServerSelectionDown,
+                                        ),
+                                        triggers: vec!["k".to_string()],
+                                    }],
+                                },
+                            },
+                        )),
+                ))
             }
             Command::ServerModule(ServerCommands::ServerSelectionUp) => Ok(NothingDone),
             Command::ServerModule(ServerCommands::ServerSelectionDown) => Ok(NothingDone),

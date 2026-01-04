@@ -19,8 +19,8 @@ pub enum ApplicationCommands {
 
 #[derive(Clone)]
 pub struct CommandTriggerPayload {
-    module_name: &'static str,
-    command_triggers: Vec<CommandTrigger>,
+    pub module_name: &'static str,
+    pub command_triggers: Vec<CommandTrigger>,
 }
 
 impl CommandTriggerPayload {
@@ -31,9 +31,9 @@ impl CommandTriggerPayload {
 
 #[derive(Clone)]
 pub struct CommandTrigger {
-    command_name: &'static str,
-    triggers: Vec<String>,
-    command: Box<Command>,
+    pub command_name: &'static str,
+    pub triggers: Vec<String>,
+    pub command: Command,
 }
 
 #[derive(Clone)]
@@ -53,6 +53,7 @@ pub enum ProcessingResult {
 
 pub struct ProcessingResultPayload {
     pub events: Vec<Event>,
+    pub commands: Vec<Command>,
     pub tasks: Vec<Box<dyn Task>>,
 }
 
@@ -60,11 +61,17 @@ impl ProcessingResultPayload {
     pub fn new() -> Self {
         Self {
             events: Vec::new(),
+            commands: Vec::new(),
             tasks: Vec::new(),
         }
     }
     pub fn with_event(mut self, event: Event) -> Self {
         self.events.push(event);
+        self
+    }
+
+    pub fn with_command(mut self, command: Command) -> Self {
+        self.commands.push(command);
         self
     }
 
@@ -75,6 +82,7 @@ impl ProcessingResultPayload {
 
     pub fn add_result(&mut self, result: ProcessingResultPayload) {
         self.events.extend(result.events);
+        self.commands.extend(result.commands);
         self.tasks.extend(result.tasks);
     }
 }

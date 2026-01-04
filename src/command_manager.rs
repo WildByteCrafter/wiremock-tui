@@ -86,8 +86,8 @@ impl CommandManagerTask {
               _ = self.command_sender.closed() => {
                 break;
               }
-              blub = self.trigger_receiver.recv() => {
-                    match blub {
+              payload_optional = self.trigger_receiver.recv() => {
+                    match payload_optional {
                         None => {}
                         Some(payload) => {
                             self.command_triggers.append(payload.get_command_triggers().as_mut())
@@ -107,6 +107,9 @@ impl CommandManagerTask {
                             None => {}
                         }
               }
+                Some(Ok(evt)) = crossterm_event => {
+                    println!("{:?}", evt);
+              }
               _ = tick_delay => {
                 self.send(Command::Application(ApplicationCommands::Tick));
               }
@@ -114,7 +117,6 @@ impl CommandManagerTask {
         }
         Ok(())
     }
-    
 
     fn send(&self, event: Command) {
         // Ignores the result because shutting down the app drops the receiver, which causes the send

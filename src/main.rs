@@ -1,5 +1,5 @@
 mod app;
-mod event_manager;
+mod command_manager;
 mod contract;
 mod server;
 

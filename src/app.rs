@@ -1,7 +1,7 @@
 use crate::contract::{
     ApplicationCommands, Command, Event, Module, ProcessingResult, ProcessingResultPayload, Task,
 };
-use crate::event_manager::CommandManager;
+use crate::command_manager::CommandManager;
 use crate::server::server_module::{ServerEvents, ServerModule};
 use color_eyre::Report;
 use ratatui::DefaultTerminal;
@@ -54,9 +54,8 @@ impl App {
 
     fn render_ui(&mut self, terminal: &mut DefaultTerminal) -> Result<(), Report> {
         for module in &mut self.modules {
-            let blub = module.as_mut();
-            if blub.name().eq(self.app_state.active_module_for_ui()) {
-                terminal.draw(|e| blub.render(e))?;
+            if module.name().eq(self.app_state.active_module_for_ui()) {
+                terminal.draw(|e| module.render(e))?;
             }
         }
         Ok(())
@@ -102,11 +101,17 @@ impl App {
         &mut self,
         processing_result_payload: ProcessingResultPayload,
     ) -> Result<Vec<Box<dyn Task>>, Report> {
-        let ProcessingResultPayload { events, tasks } = processing_result_payload;
-        let commands = self.process_events(events)?;
+        let ProcessingResultPayload {
+            events,
+            tasks,
+            commands,
+        } = processing_result_payload;
+        let mut res_commands = vec![];
+        res_commands.extend(commands);
+        res_commands.extend(self.process_events(events)?);
         let mut res_tasks: Vec<Box<dyn Task>> = vec![];
         res_tasks.extend(tasks);
-        res_tasks.extend(self.process_commands(commands)?);
+        res_tasks.extend(self.process_commands(res_commands)?);
         Ok(res_tasks)
     }
 
