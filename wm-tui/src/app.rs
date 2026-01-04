@@ -1,9 +1,10 @@
 use crate::command_manager::CommandManager;
-use crate::server::server_module::{ServerEvents, ServerModule};
-use color_eyre::Report;
-use ratatui::DefaultTerminal;
 use crate::contract::contract_module::{ApplicationCommands, Command, Event, Module, Task};
 use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPayload};
+use crate::server::server_module::{ServerEvents, ServerModule};
+use crate::stub::stub_module::StubModule;
+use color_eyre::Report;
+use ratatui::DefaultTerminal;
 
 pub struct App {
     keep_running: bool,
@@ -33,7 +34,7 @@ impl App {
         Self {
             keep_running: true,
             command_manager: CommandManager::new(),
-            modules: vec![Box::new(ServerModule::new())],
+            modules: vec![Box::new(ServerModule::new()), Box::new(StubModule::new())],
             app_state: AppState::Starting,
         }
     }
@@ -124,7 +125,7 @@ impl App {
 
     fn process_event(&mut self, event: Event) -> Result<Vec<Command>, Report> {
         match event {
-            Event::ServerModule(ServerEvents::ServerSelected { server }) => {
+            Event::ServerModule(ServerEvents::ServerSelected { server: _ }) => {
                 Ok(vec![Command::Application(ApplicationCommands::Quit)])
             }
             Event::ServerModule(ServerEvents::ServerSelectionReadyForDisplay) => {

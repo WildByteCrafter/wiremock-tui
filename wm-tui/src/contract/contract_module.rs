@@ -1,6 +1,7 @@
 use crate::contract::contract_processing::ProcessingResult;
 use crate::contract::contract_trigger::CommandTriggerPayload;
 use crate::server::server_module::{ServerCommands, ServerEvents};
+use crate::stub::stub_module::{StubCommands, StubEvents};
 use ratatui::Frame;
 
 pub trait Module {
@@ -18,7 +19,7 @@ pub trait Module {
 pub enum Command {
     Application(ApplicationCommands),
     ServerModule(ServerCommands),
-    StubModule,
+    StubModule(StubCommands),
 }
 
 #[derive(Clone)]
@@ -33,7 +34,7 @@ pub enum ApplicationCommands {
 #[derive(Clone)]
 pub enum Event {
     ServerModule(ServerEvents),
-    StubModule,
+    StubModule(StubEvents),
 }
 
 pub trait Task: Send {

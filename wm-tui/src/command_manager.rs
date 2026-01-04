@@ -1,3 +1,5 @@
+use crate::contract::contract_module::{ApplicationCommands, Command, Task};
+use crate::contract::contract_trigger::{CommandTrigger, CommandTriggerPayload};
 use crate::server::server_module::ServerCommands;
 use color_eyre::eyre::OptionExt;
 use color_eyre::Report;
@@ -5,8 +7,6 @@ use futures::StreamExt;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use crate::contract::contract_module::{ApplicationCommands, Command, Task};
-use crate::contract::contract_trigger::{CommandTrigger, CommandTriggerPayload};
 
 const TICK_FPS: f64 = 30.0;
 
@@ -34,7 +34,7 @@ impl CommandManager {
     pub fn set_command_triggers(&self, payload: CommandTriggerPayload) -> Result<(), Report> {
         self.trigger_sender
             .send(payload)
-            .map_err(|_| color_eyre::Report::msg("Failed to send command"))
+            .map_err(|_| Report::msg("Failed to send command"))
     }
 
     pub fn execute(&self, tasks: Vec<Box<dyn Task>>) -> Result<(), Report> {
@@ -42,7 +42,7 @@ impl CommandManager {
             self.task_sender
                 .send(task)
                 .map(drop)
-                .map_err(|_| color_eyre::Report::msg("Failed to send task"))?;
+                .map_err(|_| Report::msg("Failed to send task"))?;
         }
         Ok(())
     }
@@ -82,7 +82,7 @@ impl CommandManagerTask {
         self.send(Command::ServerModule(ServerCommands::ShowServerSelection));
         loop {
             let tick_delay = tick.tick();
-            let crossterm_event = reader.next();
+            let cross_term_event = reader.next();
             tokio::select! {
               _ = self.command_sender.closed() => {
                 break;
@@ -108,13 +108,13 @@ impl CommandManagerTask {
                             None => {}
                         }
               }
-                Some(Ok(evt)) = crossterm_event => {
+                Some(Ok(evt)) = cross_term_event => {
                     println!("{:?}", evt);
               }
               _ = tick_delay => {
                 self.send(Command::Application(ApplicationCommands::Tick));
               }
-            };
+            }
         }
         Ok(())
     }
