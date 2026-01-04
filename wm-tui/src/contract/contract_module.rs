@@ -15,14 +15,14 @@ pub trait Module {
     fn render(&self, frame: &mut Frame);
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum Command {
     Application(ApplicationCommands),
     ServerModule(ServerCommands),
     StubModule(StubCommands),
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum ApplicationCommands {
     Tick,
     Quit,
@@ -31,7 +31,7 @@ pub enum ApplicationCommands {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum Event {
     ServerModule(ServerEvents),
     StubModule(StubEvents),

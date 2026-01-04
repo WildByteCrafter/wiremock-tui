@@ -1,6 +1,7 @@
 use crate::contract::contract_module::Command;
+use crossterm::event::KeyEvent;
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct CommandTriggerPayload {
     pub module_name: &'static str,
     pub command_triggers: Vec<CommandTrigger>,
@@ -12,9 +13,16 @@ impl CommandTriggerPayload {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct CommandTrigger {
     pub command_name: &'static str,
-    pub triggers: Vec<String>,
+    pub active_for_mode: ActiveForMode,
+    pub triggers: Vec<KeyEvent>,
     pub command: Command,
+}
+
+#[derive(Clone,Debug)]
+pub enum ActiveForMode {
+    Navigation,
+    AdvancedCommand,
 }

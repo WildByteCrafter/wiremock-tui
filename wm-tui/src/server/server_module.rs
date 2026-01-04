@@ -1,18 +1,19 @@
-use color_eyre::Report;
-use ratatui::widgets::Paragraph;
-use ratatui::Frame;
 use crate::contract::contract_module::{ApplicationCommands, Command, Event, Module, Task};
 use crate::contract::contract_processing::ProcessingResult::NothingDone;
 use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPayload};
-use crate::contract::contract_trigger::{CommandTrigger, CommandTriggerPayload};
+use crate::contract::contract_trigger::{ActiveForMode, CommandTrigger, CommandTriggerPayload};
+use color_eyre::Report;
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+use ratatui::widgets::Paragraph;
+use ratatui::Frame;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ServerEvents {
     ServerSelectionReadyForDisplay,
     ServerSelected { server: String },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ServerCommands {
     ShowServerSelection,
     ImportLoadedServerList { server_list: Vec<String> },
@@ -21,6 +22,7 @@ pub enum ServerCommands {
     SelectServer,
 }
 
+#[derive(Clone, Debug)]
 pub struct ServerModule {
     server_list: Vec<String>,
 }
@@ -76,19 +78,34 @@ impl Module for ServerModule {
                             ApplicationCommands::SetCommandTriggers {
                                 command_trigger_payload: CommandTriggerPayload {
                                     module_name: MODULE_NAME,
-                                    command_triggers: vec![CommandTrigger {
-                                        command_name: "up",
-                                        command: Command::ServerModule(
-                                            ServerCommands::ServerSelectionUp,
-                                        ),
-                                        triggers: vec!["j".to_string()],
-                                    },CommandTrigger{
-                                        command_name: "down",
-                                        command: Command::ServerModule(
-                                            ServerCommands::ServerSelectionDown,
-                                        ),
-                                        triggers: vec!["k".to_string()],
-                                    }],
+                                    command_triggers: vec![
+                                        CommandTrigger {
+                                            command_name: "up",
+                                            active_for_mode: ActiveForMode::Navigation,
+                                            command: Command::ServerModule(
+                                                ServerCommands::ServerSelectionUp,
+                                            ),
+                                            triggers: vec![KeyEvent {
+                                                code: KeyCode::Char('k'),
+                                                modifiers: KeyModifiers::NONE,
+                                                kind: KeyEventKind::Press,
+                                                state: KeyEventState::NONE,
+                                            }],
+                                        },
+                                        CommandTrigger {
+                                            command_name: "down",
+                                            active_for_mode: ActiveForMode::Navigation,
+                                            command: Command::ServerModule(
+                                                ServerCommands::ServerSelectionDown,
+                                            ),
+                                            triggers: vec![KeyEvent {
+                                                code: KeyCode::Char('k'),
+                                                modifiers: KeyModifiers::NONE,
+                                                kind: KeyEventKind::Press,
+                                                state: KeyEventState::NONE,
+                                            }],
+                                        },
+                                    ],
                                 },
                             },
                         )),
