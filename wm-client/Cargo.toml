@@ -1,5 +1,5 @@
 [package]
-name = "wiremock-client"
+name = "wm-client"
 version = "3.13.2"
 authors = ["OpenAPI Generator team and contributors"]
 description = "WireMock offers a REST API for administration, troubleshooting and analysis purposes"
