@@ -1,11 +1,10 @@
-use crate::contract::{
-    ApplicationCommands, Command, CommandTrigger, CommandTriggerPayload, Event, Module,
-    ProcessingResult, ProcessingResultPayload, Task,
-};
 use color_eyre::Report;
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
-use ProcessingResult::NothingDone;
+use crate::contract::contract_module::{ApplicationCommands, Command, Event, Module, Task};
+use crate::contract::contract_processing::ProcessingResult::NothingDone;
+use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPayload};
+use crate::contract::contract_trigger::{CommandTrigger, CommandTriggerPayload};
 
 #[derive(Clone)]
 pub enum ServerEvents {

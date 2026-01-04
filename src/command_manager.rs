@@ -1,4 +1,3 @@
-use crate::contract::{ApplicationCommands, Command, CommandTrigger, CommandTriggerPayload, Task};
 use crate::server::server_module::ServerCommands;
 use color_eyre::eyre::OptionExt;
 use color_eyre::Report;
@@ -6,6 +5,8 @@ use futures::StreamExt;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use crate::contract::contract_module::{ApplicationCommands, Command, Task};
+use crate::contract::contract_trigger::{CommandTrigger, CommandTriggerPayload};
 
 const TICK_FPS: f64 = 30.0;
 
