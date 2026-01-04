@@ -2,6 +2,8 @@ use crate::contract::contract_module::{Command, Module};
 use crate::contract::contract_processing::ProcessingResult;
 use color_eyre::Report;
 use ratatui::Frame;
+use ratatui::layout::Rect;
+use ratatui::prelude::Widget;
 
 #[derive(Debug, Clone)]
 pub struct StubCommands {}
@@ -36,7 +38,7 @@ impl Module for StubModule {
         todo!()
     }
 
-    fn render(&self, _: &mut Frame) {
+    fn render(&self, frame: &mut Frame, rect: Rect) {
         todo!()
     }
 }

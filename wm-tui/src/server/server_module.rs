@@ -4,6 +4,7 @@ use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPay
 use crate::contract::contract_trigger::{ActiveForMode, CommandTrigger, CommandTriggerPayload};
 use color_eyre::Report;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+use ratatui::layout::Rect;
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
@@ -124,9 +125,9 @@ impl Module for ServerModule {
         }
     }
 
-    fn render(&self, frame: &mut Frame) {
+    fn render(&self, frame: &mut Frame, rect: Rect) {
         let paragraph = Paragraph::new("Server selection");
-        frame.render_widget(paragraph, frame.area());
+        frame.render_widget(paragraph, rect);
     }
 }
 

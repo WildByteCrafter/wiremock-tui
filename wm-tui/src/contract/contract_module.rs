@@ -3,6 +3,8 @@ use crate::contract::contract_trigger::CommandTriggerPayload;
 use crate::server::server_module::{ServerCommands, ServerEvents};
 use crate::stub::stub_module::{StubCommands, StubEvents};
 use ratatui::Frame;
+use ratatui::layout::Rect;
+use ratatui::prelude::Widget;
 
 pub trait Module {
     fn name(&self) -> &'static str;
@@ -12,7 +14,7 @@ pub trait Module {
     fn process_command(&mut self, command: Command)
     -> Result<ProcessingResult, color_eyre::Report>;
 
-    fn render(&self, frame: &mut Frame);
+    fn render(&self, frame: &mut Frame, rect: Rect);
 }
 
 #[derive(Clone,Debug)]

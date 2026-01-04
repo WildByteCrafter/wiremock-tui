@@ -4,12 +4,14 @@ use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPay
 use crate::server::server_module::{ServerEvents, ServerModule};
 use crate::stub::stub_module::StubModule;
 use color_eyre::Report;
+use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::DefaultTerminal;
+use std::collections::HashMap;
 
 pub struct App {
     keep_running: bool,
     command_manager: CommandManager,
-    modules: Vec<Box<dyn Module>>,
+    modules: HashMap<&'static str, Box<dyn Module>>,
     app_state: AppState,
 }
 
@@ -31,10 +33,18 @@ impl AppState {
 
 impl App {
     pub fn new() -> Self {
+        let mut modules: HashMap<&'static str, Box<dyn Module>> = HashMap::new();
+
+        let server_module = ServerModule::new();
+        modules.insert(server_module.name(), Box::new(server_module));
+
+        let stub_module = StubModule::new();
+        modules.insert(stub_module.name(), Box::new(stub_module));
+
         Self {
             keep_running: true,
             command_manager: CommandManager::new(),
-            modules: vec![Box::new(ServerModule::new()), Box::new(StubModule::new())],
+            modules,
             app_state: AppState::Starting,
         }
     }
@@ -44,7 +54,7 @@ impl App {
             let command = self.command_manager.next().await?;
             let vec = self.process_command(command)?;
             self.command_manager.execute(vec)?;
-            self.render_ui(&mut terminal)?;
+            terminal.draw(|e| self.draw_frame(e))?;
             if !self.keep_running {
                 break;
             }
@@ -52,13 +62,21 @@ impl App {
         Ok(())
     }
 
-    fn render_ui(&mut self, terminal: &mut DefaultTerminal) -> Result<(), Report> {
-        for module in &mut self.modules {
-            if module.name().eq(self.app_state.active_module_for_ui()) {
-                terminal.draw(|e| module.render(e))?;
-            }
+    fn draw_frame(&mut self, frame: &mut ratatui::Frame) {
+        let area = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Header
+                Constraint::Min(0),    // Main Content (takes the rest)
+                Constraint::Length(1), // Footer
+            ])
+            .split(frame.area());
+
+        let mainarea = area[1];
+
+        if let Some(module) = self.modules.get_mut(self.app_state.active_module_for_ui()) {
+            module.render(frame, mainarea);
         }
-        Ok(())
     }
 
     fn process_commands(&mut self, commands: Vec<Command>) -> Result<Vec<Box<dyn Task>>, Report> {
@@ -83,7 +101,7 @@ impl App {
         }
         // If not handled by App, check the other modules
         if !handled {
-            for module in &mut self.modules {
+            for module in self.modules.values_mut() {
                 if !module.can_process_command(&command) {
                     continue;
                 }
