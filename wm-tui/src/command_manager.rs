@@ -1,8 +1,10 @@
+use crate::cmd_input::cmd_input_module::CmdInputCommands;
 use crate::contract::contract_module::{ApplicationCommands, Command, Task};
 use crate::contract::contract_trigger::{CommandTrigger, CommandTriggerPayload};
 use crate::server::server_module::ServerCommands;
 use color_eyre::eyre::OptionExt;
 use color_eyre::Report;
+use crossterm::event::Event;
 use futures::StreamExt;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -109,7 +111,14 @@ impl CommandManagerTask {
                         }
               }
                 Some(Ok(evt)) = cross_term_event => {
-                    println!("{:?}", evt);
+                    match evt{
+                        Event::Key(key_event) => {
+                            let new_command = Command::Application(ApplicationCommands::ProcessInput { input: key_event });
+                            self.command_sender.send(new_command)?;
+                        }
+                        _ => {}
+                    }
+
               }
               _ = tick_delay => {
                 self.send(Command::Application(ApplicationCommands::Tick));

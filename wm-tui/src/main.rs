@@ -3,6 +3,7 @@ mod command_manager;
 mod contract;
 mod server;
 mod stub;
+mod cmd_input;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {

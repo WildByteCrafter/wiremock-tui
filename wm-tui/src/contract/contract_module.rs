@@ -1,5 +1,7 @@
+use crossterm::event::KeyEvent;
 use crate::contract::contract_processing::ProcessingResult;
 use crate::contract::contract_trigger::CommandTriggerPayload;
+use crate::cmd_input::cmd_input_module::CmdInputCommands;
 use crate::server::server_module::{ServerCommands, ServerEvents};
 use crate::stub::stub_module::{StubCommands, StubEvents};
 use ratatui::Frame;
@@ -22,6 +24,7 @@ pub enum Command {
     Application(ApplicationCommands),
     ServerModule(ServerCommands),
     StubModule(StubCommands),
+    CmdInputModule(CmdInputCommands),
 }
 
 #[derive(Clone,Debug)]
@@ -30,6 +33,9 @@ pub enum ApplicationCommands {
     Quit,
     SetCommandTriggers {
         command_trigger_payload: CommandTriggerPayload,
+    },
+    ProcessInput {
+        input: KeyEvent,
     },
 }
 

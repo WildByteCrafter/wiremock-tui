@@ -1,3 +1,4 @@
+use crate::cmd_input::cmd_input_module::{CmdInputCommands, CmdInputModule};
 use crate::command_manager::CommandManager;
 use crate::contract::contract_module::{ApplicationCommands, Command, Event, Module, Task};
 use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPayload};
@@ -40,6 +41,9 @@ impl App {
 
         let stub_module = StubModule::new();
         modules.insert(stub_module.name(), Box::new(stub_module));
+
+        let cmd_input_module = CmdInputModule::new();
+        modules.insert(cmd_input_module.name(), Box::new(cmd_input_module));
 
         Self {
             keep_running: true,
@@ -180,10 +184,19 @@ impl App {
             Command::Application(ApplicationCommands::SetCommandTriggers {
                 command_trigger_payload,
             }) => {
-                self.command_manager
-                    .set_command_triggers(command_trigger_payload)
-                    .map(|_| true)?;
-                Ok(ProcessingResult::Processed(ProcessingResultPayload::new()))
+                let new_command =
+                    Command::CmdInputModule(CmdInputCommands::RegisterCommandTriggers {
+                        command_trigger_payload,
+                    });
+                Ok(ProcessingResult::Processed(
+                    ProcessingResultPayload::new().with_command(new_command),
+                ))
+            }
+            Command::Application(ApplicationCommands::ProcessInput { input }) => {
+                let new_command = Command::CmdInputModule(CmdInputCommands::ProcessInput { input });
+                Ok(ProcessingResult::Processed(
+                    ProcessingResultPayload::new().with_command(new_command),
+                ))
             }
             _ => Ok(ProcessingResult::NothingDone),
         }
