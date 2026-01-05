@@ -81,19 +81,21 @@ impl Module for ServerModule {
                                     module_name: MODULE_NAME,
                                     command_triggers: vec![
                                         CommandTrigger {
+                                            module_name: MODULE_NAME,
                                             command_name: "up",
                                             active_for_mode: ActiveForMode::Navigation,
                                             command: Command::ServerModule(
                                                 ServerCommands::ServerSelectionUp,
                                             ),
                                             triggers: vec![KeyEvent {
-                                                code: KeyCode::Char('k'),
+                                                code: KeyCode::Char('j'),
                                                 modifiers: KeyModifiers::NONE,
                                                 kind: KeyEventKind::Press,
                                                 state: KeyEventState::NONE,
                                             }],
                                         },
                                         CommandTrigger {
+                                            module_name: MODULE_NAME,
                                             command_name: "down",
                                             active_for_mode: ActiveForMode::Navigation,
                                             command: Command::ServerModule(

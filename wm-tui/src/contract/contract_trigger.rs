@@ -15,6 +15,7 @@ impl CommandTriggerPayload {
 
 #[derive(Clone,Debug)]
 pub struct CommandTrigger {
+    pub module_name: &'static str,
     pub command_name: &'static str,
     pub active_for_mode: ActiveForMode,
     pub triggers: Vec<KeyEvent>,
