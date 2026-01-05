@@ -3,8 +3,10 @@ use crate::contract::contract_processing::ProcessingResult::NothingDone;
 use crate::contract::contract_processing::{ProcessingResult, ProcessingResultPayload};
 use crate::contract::contract_trigger::{ActiveForMode, CommandTrigger, CommandTriggerPayload};
 use color_eyre::Report;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Rect;
+use ratatui::style::{Color, Style};
+use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 #[derive(Clone, Debug)]
@@ -73,7 +75,24 @@ impl Module for CmdInputModule {
     }
 
     fn render(&self, frame: &mut Frame, rect: Rect) {
-        todo!()
+        if self.mode == InputMode::AdvancedCommand {
+            let input_string: String = self
+                .input_buffer
+                .iter()
+                .filter_map(|key_event| {
+                    if let KeyCode::Char(c) = key_event.code {
+                        Some(c)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            let display_text = format!(":{}", input_string);
+            let paragraph = Paragraph::new(display_text).style(Style::default().fg(Color::Yellow));
+
+            frame.render_widget(paragraph, rect);
+        }
     }
 }
 
@@ -82,8 +101,6 @@ impl CmdInputModule {
         &mut self,
         payload: CommandTriggerPayload,
     ) -> Result<ProcessingResult, Report> {
-        println!("Registering command triggers: {:?}", payload);
-
         let module_name = payload.module_name;
         self.command_triggers
             .retain(|t| t.module_name != module_name);
@@ -97,7 +114,6 @@ impl CmdInputModule {
     }
 
     fn handle_process_input(&mut self, input: KeyEvent) -> Result<ProcessingResult, Report> {
-        println!("Input: {:?}", input);
         let mut result_payload = ProcessingResultPayload::new();
         match self.mode {
             InputMode::Navigation => self.handle_navigation_mode(input, &mut result_payload),
@@ -109,7 +125,7 @@ impl CmdInputModule {
     }
 
     fn handle_navigation_mode(&mut self, input: KeyEvent, result_payload: &mut ProcessingResultPayload) {
-        if let crossterm::event::KeyCode::Char(':') = input.code {
+        if let KeyCode::Char(':') = input.code {
             self.mode = InputMode::AdvancedCommand;
             self.input_buffer.clear();
         } else {
@@ -134,27 +150,38 @@ impl CmdInputModule {
         input: KeyEvent,
         result_payload: &mut ProcessingResultPayload,
     ) {
-        if let crossterm::event::KeyCode::Enter = input.code {
-            let matching_trigger = self.command_triggers.iter().find(|t| {
-                matches!(
-                    t.active_for_mode,
-                    ActiveForMode::AdvancedCommand
-                ) && t.triggers == self.input_buffer
-            });
+        match input.code {
+            KeyCode::Enter => {
+                let matching_trigger = self.command_triggers.iter().find(|t| {
+                    matches!(
+                        t.active_for_mode,
+                        ActiveForMode::AdvancedCommand
+                    ) && t.triggers == self.input_buffer
+                });
 
-            if let Some(trigger) = matching_trigger {
-                let old_payload = std::mem::replace(result_payload, ProcessingResultPayload::new());
-                *result_payload = old_payload.with_command(trigger.command.clone());
+                if let Some(trigger) = matching_trigger {
+                    let old_payload =
+                        std::mem::replace(result_payload, ProcessingResultPayload::new());
+                    *result_payload = old_payload.with_command(trigger.command.clone());
+                    self.mode = InputMode::Navigation;
+                    self.input_buffer.clear();
+                } else {
+                    panic!(
+                        "No advanced command matches the input buffer: {:?}",
+                        self.input_buffer
+                    );
+                }
+            }
+            KeyCode::Backspace => {
+                self.input_buffer.pop();
+            }
+            KeyCode::Esc => {
                 self.mode = InputMode::Navigation;
                 self.input_buffer.clear();
-            } else {
-                panic!(
-                    "No advanced command matches the input buffer: {:?}",
-                    self.input_buffer
-                );
             }
-        } else {
-            self.input_buffer.push(input);
+            _ => {
+                self.input_buffer.push(input);
+            }
         }
     }
 }

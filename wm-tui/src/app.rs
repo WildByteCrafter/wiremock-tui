@@ -77,9 +77,14 @@ impl App {
             .split(frame.area());
 
         let mainarea = area[1];
+        let footerarea = area[2];
 
         if let Some(module) = self.modules.get_mut(self.app_state.active_module_for_ui()) {
             module.render(frame, mainarea);
+        }
+
+        if let Some(cmd_input_module) = self.modules.get_mut("cmd_input") {
+            cmd_input_module.render(frame, footerarea);
         }
     }
 
