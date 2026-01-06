@@ -8,9 +8,6 @@ pub struct CommandTriggerPayload {
 }
 
 impl CommandTriggerPayload {
-    pub fn get_command_triggers(self) -> Vec<CommandTrigger> {
-        self.command_triggers
-    }
 }
 
 #[derive(Clone,Debug)]
