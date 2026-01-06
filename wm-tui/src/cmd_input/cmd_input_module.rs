@@ -19,9 +19,6 @@ pub enum CmdInputCommands {
     },
 }
 
-#[derive(Clone, Debug)]
-pub enum CmdInputEvents {}
-
 #[derive(Clone, Debug, PartialEq)]
 enum InputMode {
     Navigation,

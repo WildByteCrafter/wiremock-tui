@@ -3,7 +3,6 @@ use crate::contract::contract_processing::ProcessingResult;
 use color_eyre::Report;
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::prelude::Widget;
 
 #[derive(Debug, Clone)]
 pub struct StubCommands {}

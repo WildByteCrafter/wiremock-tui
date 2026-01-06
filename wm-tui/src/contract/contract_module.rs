@@ -6,7 +6,6 @@ use crate::server::server_module::{ServerCommands, ServerEvents};
 use crate::stub::stub_module::{StubCommands, StubEvents};
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::prelude::Widget;
 
 pub trait Module {
     fn name(&self) -> &'static str;
